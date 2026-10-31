@@ -158,28 +158,49 @@ void main() {
 
   group('PackScreen Interaction Widget Tests (Drag in, Click pack, Unpack)', () {
     late AppDatabase inMemoryDb;
+    late ProviderContainer container;
     late String testListId;
+    bool dbClosed = false;
 
     setUp(() async {
       AudioService.enabled = false;
       HapticService.enabled = false;
       inMemoryDb = AppDatabase(NativeDatabase.memory());
+      dbClosed = false;
       // Initialize preset checklist
       final repo = ChecklistRepository(inMemoryDb);
       await repo.ensurePresetChecklist();
       final summaries = await repo.watchAllSummaries().first;
       testListId = summaries.first.id;
-    });
-
-    tearDown(() async {
-      await inMemoryDb.close();
-    });
-
-    Widget createTestApp() {
-      return ProviderScope(
+      // Own the container so tests can dispose it explicitly before the
+      // framework tears the tree down. Disposing a StreamProvider backed by
+      // a drift stream schedules a zero-duration timer (StreamQueryStore
+      // markAsClosed); if that timer is still pending when the framework
+      // disposes the tree, the test fails with "Timer is still pending".
+      container = ProviderContainer(
         overrides: [
           databaseProvider.overrideWithValue(inMemoryDb),
         ],
+      );
+    });
+
+    tearDown(() async {
+      // addTearDown in each test body already disposes the container,
+      // flushes timers and closes the db. This is only a safety net.
+      if (!dbClosed) {
+        try {
+          container.dispose();
+        } catch (_) {}
+        try {
+          await inMemoryDb.close();
+        } catch (_) {}
+        dbClosed = true;
+      }
+    });
+
+    Widget createTestApp() {
+      return UncontrolledProviderScope(
+        container: container,
         child: MaterialApp(
           theme: AppTheme.lightTheme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -191,6 +212,16 @@ void main() {
 
     testWidgets('Click unpacked card to pack item, and click packed card to unpack',
         (WidgetTester tester) async {
+      // Dispose the container explicitly and flush its zero-duration
+      // timers before the framework disposes the tree (see setUp note).
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
       // Set tester window size to a realistic phone resolution (400 x 850)
       tester.view.physicalSize = const Size(400, 850);
       tester.view.devicePixelRatio = 1.0;
@@ -228,6 +259,14 @@ void main() {
 
     testWidgets('Drag card > 8pt into backpack drop zone packs item',
         (WidgetTester tester) async {
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
       tester.view.physicalSize = const Size(400, 850);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -269,6 +308,14 @@ void main() {
 
     testWidgets('Drag card and drop outside drop zone flies back and remains unpacked',
         (WidgetTester tester) async {
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
       tester.view.physicalSize = const Size(400, 850);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
