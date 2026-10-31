@@ -1,0 +1,115 @@
+{
+  "@@locale": "zh",
+  "appTitle": "带齐了",
+  "tabChecklists": "清单",
+  "tabForgot": "遗忘记录",
+  "tabSettings": "设置",
+  "homeTitle": "带齐了",
+  "startPacking": "开始装包",
+  "myChecklists": "我的清单",
+  "newChecklist": "＋ 新建清单",
+  "presetMnemonicTitle": "伸手要钱",
+  "presetItemsSummary": "身份证 · 手机 · 钥匙 · 钱包",
+  "itemCount": "{count} 件",
+  "@itemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "highRiskBadge": "{count} 件高危",
+  "@highRiskBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "packSubtitleRemaining": "还差 {count} 件 · 把东西拖进包里",
+  "@packSubtitleRemaining": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "packSubtitleAllPacked": "全部装好了",
+  "dropZoneHint": "松手放进包里",
+  "highRiskBanner": "🔴 {items} 你以前忘过，先装它们",
+  "@highRiskBanner": {
+    "placeholders": {
+      "items": { "type": "String" }
+    }
+  },
+  "doneTitle": "全部带齐，出门吧！",
+  "doneSubtitle": "{packed} / {total} 件已装包",
+  "@doneSubtitle": {
+    "placeholders": {
+      "packed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "streakZeroForgot": "· 连续 {count} 次零遗漏 🔥",
+  "@streakZeroForgot": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "doorButton": "出门 🚪",
+  "forgotLink": "还是忘了东西？记一笔",
+  "forgotTitle": "这次忘了什么？",
+  "forgotButton": "记下来，下次提醒我",
+  "forgotSuccess": "已记下，下次 {items} 会排在最前面",
+  "@forgotSuccess": {
+    "placeholders": {
+      "items": { "type": "String" }
+    }
+  },
+  "incompleteLeaveTitle": "还有 {count} 件没装：{items}。确定就这样出门吗？",
+  "@incompleteLeaveTitle": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "items": { "type": "String" }
+    }
+  },
+  "btnStay": "再看看",
+  "btnDepartAnyway": "就这样出门",
+  "btnPackLater": "稍后再装",
+  "actionSkipToday": "今天不带",
+  "actionRestore": "恢复",
+  "allSkipped": "今天什么都不带吗？",
+  "btnDepartDirectly": "直接出门",
+  "emptyChecklist": "先往清单里加点东西",
+  "emptyForgotRecords": "还没有忘过东西，继续保持 👍",
+  "onboardingHint": "试试把钥匙拖进包里",
+  "onboardingDone": "就是这样！出门前把东西都装进包里",
+  "onboardingStart": "开始使用",
+  "back": "‹ 返回",
+  "edit": "编辑",
+  "save": "保存",
+  "delete": "删除",
+  "duplicate": "复制",
+  "confirmDeleteChecklistTitle": "删除清单",
+  "confirmDeleteChecklistContent": "确定要删除此清单吗？清单内的物品将被移除，但遗忘统计仍会保留。",
+  "cancel": "取消",
+  "checklistName": "清单名称",
+  "checklistNameHint": "如：日常通勤（最多12字）",
+  "checklistIcon": "清单图标",
+  "itemsList": "物品列表",
+  "addItemHint": "输入物品名，回车添加",
+  "mnemonicToggle": "生成口诀条",
+  "mnemonicLabel": "口诀",
+  "mnemonicHint": "如：身手钥钱",
+  "mnemonicRuleTip": "口诀字数必须与物品数量一致才能显示",
+  "reminderToggle": "定时提醒",
+  "reminderTime": "提醒时间",
+  "reminderDays": "重复日",
+  "weekdays": "工作日",
+  "itemAlreadyExists": "清单里已经有 {name} 了",
+  "@itemAlreadyExists": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "commonItemsTitle": "常用物品快捷添加",
+  "settingsSound": "声音",
+  "settingsHaptic": "震动",
+  "settingsReducedMotion": "减少动效",
+  "settingsAbout": "关于",
+  "version": "版本"
+}
