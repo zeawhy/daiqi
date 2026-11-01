@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/done/done_screen.dart';
 import '../features/editor/checklist_editor_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/forgot/forgot_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/navigation/main_scaffold.dart';
@@ -77,6 +78,13 @@ final goRouter = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id'];
         return ChecklistEditorScreen(checklistId: id);
+      },
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/onboarding',
+      builder: (context, state) {
+        return const OnboardingScreen();
       },
     ),
   ],

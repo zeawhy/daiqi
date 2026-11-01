@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../shared/constants/emoji_presets.dart';
+import '../../shared/services/notification_service.dart';
 
 class ChecklistEditorScreen extends ConsumerStatefulWidget {
   final String? checklistId; // null if creating new checklist
@@ -143,9 +144,10 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
         '${_reminderTime.hour.toString().padLeft(2, '0')}:${_reminderTime.minute.toString().padLeft(2, '0')}';
 
     final checklistRepo = ref.read(checklistRepositoryProvider);
+    String targetId;
 
     if (widget.checklistId == null) {
-      await checklistRepo.createChecklist(
+      targetId = await checklistRepo.createChecklist(
         name: name,
         emoji: _selectedEmoji,
         mnemonic: mnemonic,
@@ -155,8 +157,9 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
         items: _items,
       );
     } else {
+      targetId = widget.checklistId!;
       await checklistRepo.updateChecklist(
-        listId: widget.checklistId!,
+        listId: targetId,
         name: name,
         emoji: _selectedEmoji,
         mnemonic: mnemonic,
@@ -165,6 +168,18 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
         reminderWeekdays: _reminderWeekdays,
         items: _items,
       );
+    }
+
+    if (_reminderEnabled) {
+      await NotificationService.scheduleChecklistReminder(
+        listId: targetId,
+        listName: name,
+        itemCount: _items.length,
+        reminderTime: timeStr,
+        reminderWeekdays: _reminderWeekdays,
+      );
+    } else {
+      await NotificationService.cancelChecklistReminders(targetId);
     }
 
     if (mounted) {
@@ -350,6 +365,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _items.length,
+                // ignore: deprecated_member_use
                 onReorder: _reorderItems,
                 itemBuilder: (context, index) {
                   final item = _items[index];

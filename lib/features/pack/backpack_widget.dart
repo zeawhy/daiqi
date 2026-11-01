@@ -43,6 +43,7 @@ class BackpackWidgetState extends State<BackpackWidget>
   late AnimationController _zipperController;
   late AnimationController _colorController;
   late AnimationController _smileController;
+  bool _isPlayingSequence = false;
 
   @override
   void initState() {
@@ -121,7 +122,9 @@ class BackpackWidgetState extends State<BackpackWidget>
     }
 
     if (widget.isDone && !oldWidget.isDone) {
-      playAllPackedSequence();
+      if (!_isPlayingSequence && _smileController.value < 1.0) {
+        playAllPackedSequence();
+      }
     } else if (!widget.isDone && oldWidget.isDone) {
       _colorController.value = 0.0;
       _smileController.value = 0.0;
@@ -151,29 +154,36 @@ class BackpackWidgetState extends State<BackpackWidget>
   /// Plays all packed sequence:
   /// wait 300ms -> zipper slide left to right (600ms) -> color green (300ms) -> smile fade in
   Future<void> playAllPackedSequence({VoidCallback? onZipperStart, VoidCallback? onCompleted}) async {
-    if (widget.reducedMotion) {
-      _colorController.value = 1.0;
-      _smileController.value = 1.0;
-      _zipperController.value = 1.0;
+    if (_isPlayingSequence) return;
+    _isPlayingSequence = true;
+
+    try {
+      if (widget.reducedMotion) {
+        _colorController.value = 1.0;
+        _smileController.value = 1.0;
+        _zipperController.value = 1.0;
+        onCompleted?.call();
+        return;
+      }
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+
+      onZipperStart?.call();
+      _zipperController.reset();
+      await _zipperController.forward();
+      if (!mounted) return;
+
+      await _colorController.forward();
+      if (!mounted) return;
+
+      await _smileController.forward();
+      if (!mounted) return;
+
       onCompleted?.call();
-      return;
+    } finally {
+      _isPlayingSequence = false;
     }
-
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-
-    onZipperStart?.call();
-    _zipperController.reset();
-    await _zipperController.forward();
-    if (!mounted) return;
-
-    await _colorController.forward();
-    if (!mounted) return;
-
-    await _smileController.forward();
-    if (!mounted) return;
-
-    onCompleted?.call();
   }
 
   @override

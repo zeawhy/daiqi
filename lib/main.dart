@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'app/crash_screen.dart';
+import 'app/routes.dart';
 import 'shared/services/audio_service.dart';
+import 'shared/services/notification_service.dart';
 
 /// First fatal Dart error caught after startup, if any. The root widget
 /// listens to this and swaps the whole UI for [CrashScreen] so the stack
@@ -33,6 +35,9 @@ void main() {
       _reportCrash(details.exception, details.stack);
     };
     AudioService.init();
+    NotificationService.init(onSelectNotification: (listId) {
+      goRouter.push('/pack/$listId');
+    });
     runApp(
       ProviderScope(
         child: ValueListenableBuilder<Object?>(

@@ -8,6 +8,7 @@ import '../../app/theme.dart';
 import '../../domain/models/pack_models.dart';
 import '../../shared/widgets/dashed_border.dart';
 import '../../shared/widgets/mini_backpack.dart';
+import '../onboarding/onboarding_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     // Ensure preset checklist is initialized on startup
     ref.read(checklistRepositoryProvider).ensurePresetChecklist();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFirstLaunch();
+    });
+  }
+
+  Future<void> _checkFirstLaunch() async {
+    final completed = await OnboardingService.isCompleted();
+    if (!completed && mounted) {
+      context.push('/onboarding');
+    }
   }
 
   String _formatWeekdaySubtitle() {
