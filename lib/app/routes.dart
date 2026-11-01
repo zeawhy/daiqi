@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/done/done_screen.dart';
 import '../features/editor/checklist_editor_screen.dart';
 import '../features/forgot/forgot_screen.dart';
 import '../features/home/home_screen.dart';
@@ -52,6 +53,15 @@ final goRouter = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return PackScreen(checklistId: id);
+      },
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/done/:sessionId',
+      builder: (context, state) {
+        final sessionId = state.pathParameters['sessionId']!;
+        final listId = state.uri.queryParameters['listId'] ?? '';
+        return DoneScreen(sessionId: sessionId, listId: listId);
       },
     ),
     GoRoute(

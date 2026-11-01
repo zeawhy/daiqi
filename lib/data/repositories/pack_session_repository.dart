@@ -227,4 +227,43 @@ class PackSessionRepository {
       ),
     );
   }
+
+  /// Get session by id
+  Future<PackSession?> getSessionById(String sessionId) async {
+    return (db.select(db.packSessions)..where((t) => t.id.equals(sessionId))).getSingleOrNull();
+  }
+
+  /// Calculate consecutive zero-forgot count according to Section 7.4.
+  Future<int> getStreakZeroForgot() async {
+    final departedSessions = await (db.select(db.packSessions)
+          ..where((t) => t.status.isIn(['departed', 'departed_incomplete']))
+          ..orderBy([(t) => OrderingTerm.desc(t.departedAt)]))
+        .get();
+
+    final List<({String status, bool hadForgot})> sessionRecords = [];
+
+    for (final session in departedSessions) {
+      if (session.status == 'departed_incomplete') {
+        sessionRecords.add((status: 'departed_incomplete', hadForgot: false));
+        continue;
+      }
+
+      // Check if there is an associated forgot record
+      final departedTime = session.departedAt ?? session.startedAt;
+      final departedEnd = departedTime.add(const Duration(hours: 24));
+
+      final forgotRecord = await (db.select(db.forgotRecords)
+            ..where((t) =>
+                t.sessionId.equals(session.id) |
+                (t.listId.equals(session.listId) &
+                    t.createdAt.isBiggerOrEqualValue(departedTime) &
+                    t.createdAt.isSmallerOrEqualValue(departedEnd)))
+            ..limit(1))
+          .getSingleOrNull();
+
+      sessionRecords.add((status: 'departed', hadForgot: forgotRecord != null));
+    }
+
+    return SessionRules.calculateStreak(sessionsDescending: sessionRecords);
+  }
 }

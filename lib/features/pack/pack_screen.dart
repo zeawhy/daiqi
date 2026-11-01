@@ -406,13 +406,18 @@ class _PackScreenState extends ConsumerState<PackScreen>
         AudioService.playZip();
         HapticService.success();
       },
-      onCompleted: () {
+      onCompleted: () async {
         if (_session != null) {
-          ref.read(packSessionRepositoryProvider).updateSessionStatus(
+          await ref.read(packSessionRepositoryProvider).updateSessionStatus(
                 _session!.id,
                 'completed',
                 completedAt: DateTime.now().toUtc(),
               );
+          if (mounted) {
+            context.pushReplacement(
+              '/done/${_session!.id}?listId=${widget.checklistId}',
+            );
+          }
         }
       },
     );
@@ -502,9 +507,19 @@ class _PackScreenState extends ConsumerState<PackScreen>
     final unpackedItems = activeItems.where((i) => !i.isPacked).toList();
     final packedCount = activeItems.where((i) => i.isPacked).length;
 
+    void exitScreen() {
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/');
+        }
+      }
+    }
+
     // If 0 items packed or all items packed, exit directly
     if (packedCount == 0 || unpackedItems.isEmpty) {
-      context.pop();
+      exitScreen();
       return;
     }
 
@@ -534,7 +549,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                         departedAt: DateTime.now().toUtc(),
                       );
                 }
-                if (mounted) context.pop();
+                exitScreen();
               },
               child: const Text('就这样出门', style: TextStyle(color: AppColors.danger)),
             ),
@@ -542,7 +557,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
               style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
               onPressed: () {
                 dialogCtx.pop();
-                if (mounted) context.pop();
+                exitScreen();
               },
               child: const Text('稍后再装'),
             ),
@@ -570,6 +585,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
       error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
       data: (items) {
         final activeItems = items.where((i) => !i.isSkipped).toList();
+        final allSkipped = items.isNotEmpty && activeItems.isEmpty;
         final totalCount = activeItems.length;
         final packedCount = activeItems.where((i) => i.isPacked).length;
         final remainingCount = totalCount - packedCount;
@@ -594,7 +610,56 @@ class _PackScreenState extends ConsumerState<PackScreen>
                   Column(
                     children: [
                       // 1. Top Header (‹ 返回, 编辑, 标题, 副标题)
-                      _buildHeader(remainingCount, isAllPacked, items),
+                      _buildHeader(remainingCount, isAllPacked, allSkipped, items),
+
+                      // Section 11: All skipped banner and "直接出门" button
+                      if (allSkipped)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                '今天什么都不带吗？',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.done,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  AudioService.playDoor();
+                                  if (_session != null) {
+                                    await ref
+                                        .read(packSessionRepositoryProvider)
+                                        .updateSessionStatus(
+                                          _session!.id,
+                                          'departed',
+                                          departedAt: DateTime.now().toUtc(),
+                                        );
+                                  }
+                                  if (mounted) context.go('/');
+                                },
+                                child: const Text(
+                                  '直接出门',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                       // 2. Mnemonic Bar (if present and character count matches items count)
                       if (_checklist!.mnemonic != null && _checklist!.mnemonic!.isNotEmpty)
@@ -681,7 +746,12 @@ class _PackScreenState extends ConsumerState<PackScreen>
     );
   }
 
-  Widget _buildHeader(int remainingCount, bool isAllPacked, List<PackItemModel> items) {
+  Widget _buildHeader(
+    int remainingCount,
+    bool isAllPacked,
+    bool allSkipped,
+    List<PackItemModel> items,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -730,7 +800,16 @@ class _PackScreenState extends ConsumerState<PackScreen>
             ),
           ),
           const SizedBox(height: 4),
-          if (isAllPacked)
+          if (allSkipped)
+            const Text(
+              '今天什么都不带吗？',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            )
+          else if (isAllPacked)
             const Text(
               '全部装好了',
               style: TextStyle(

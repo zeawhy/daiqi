@@ -6,6 +6,7 @@ import '../../domain/models/pack_models.dart';
 import '../../domain/rules/high_risk_rules.dart';
 import '../../domain/rules/name_normalizer.dart';
 import '../../domain/rules/session_rules.dart';
+import '../../shared/constants/emoji_presets.dart';
 import '../database.dart';
 
 class ChecklistRepository {
@@ -90,6 +91,192 @@ class ChecklistRepository {
           ),
         );
     return (await (db.select(db.globalItems)..where((t) => t.id.equals(newId))).getSingle());
+  }
+
+  /// Public helper to find or create a GlobalItem.
+  Future<GlobalItem> findOrCreateGlobalItem(String name, String emoji) =>
+      _findOrCreateGlobalItem(name, emoji);
+
+  /// Find recent departed session within 24 hours (Section 5.4).
+  Future<({PackSession session, ChecklistList list})?> getRecentDepartedSession() async {
+    final threshold = DateTime.now().toUtc().subtract(const Duration(hours: 24));
+    final session = await (db.select(db.packSessions)
+          ..where((t) =>
+              t.status.equals('departed') &
+              t.departedAt.isBiggerOrEqualValue(threshold))
+          ..orderBy([(t) => OrderingTerm.desc(t.departedAt)])
+          ..limit(1))
+        .getSingleOrNull();
+
+    if (session == null) return null;
+    final list = await getChecklist(session.listId);
+    if (list == null) return null;
+    return (session: session, list: list);
+  }
+
+  /// Record forgotten items (Section 5.4 & 7.2-7.3).
+  Future<List<String>> recordForgotItems({
+    String? sessionId,
+    String? listId,
+    required List<String> itemNames,
+    bool addOutsideToChecklist = false,
+  }) async {
+    final now = DateTime.now().toUtc();
+    final List<String> recordedNames = [];
+
+    // Existing items in checklist (if listId is provided)
+    List<ListItem> currentListItems = [];
+    if (listId != null) {
+      currentListItems = await getItemsForChecklist(listId);
+    }
+
+    for (final name in itemNames) {
+      final trimmed = name.trim();
+      if (trimmed.isEmpty) continue;
+
+      // Find emoji: if it's already in the checklist, use its emoji, else match
+      String emoji = EmojiPresets.matchEmoji(trimmed);
+      final existingListItem =
+          currentListItems.where((i) => i.name.trim() == trimmed).firstOrNull;
+      if (existingListItem != null) {
+        emoji = existingListItem.emoji;
+      }
+
+      final globalItem = await _findOrCreateGlobalItem(trimmed, emoji);
+
+      // Increment forgotCount and set lastForgotAt
+      final newForgotCount = globalItem.forgotCount + 1;
+      await (db.update(db.globalItems)..where((t) => t.id.equals(globalItem.id))).write(
+        GlobalItemsCompanion(
+          forgotCount: Value(newForgotCount),
+          lastForgotAt: Value(now),
+        ),
+      );
+
+      // Insert ForgotRecord
+      await db.into(db.forgotRecords).insert(
+            ForgotRecordsCompanion.insert(
+              id: _uuid.v4(),
+              globalItemId: globalItem.id,
+              sessionId: Value(sessionId),
+              listId: Value(listId),
+              createdAt: now,
+            ),
+          );
+
+      // If requested, add outside item to checklist
+      if (addOutsideToChecklist && listId != null && existingListItem == null) {
+        final maxSort = currentListItems.isEmpty
+            ? 0
+            : currentListItems.map((e) => e.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+        await db.into(db.listItems).insert(
+              ListItemsCompanion.insert(
+                id: _uuid.v4(),
+                listId: listId,
+                globalItemId: globalItem.id,
+                name: trimmed,
+                emoji: emoji,
+                sortOrder: Value(maxSort),
+                createdAt: now,
+              ),
+            );
+        currentListItems = await getItemsForChecklist(listId);
+      }
+
+      recordedNames.add(trimmed);
+    }
+
+    return recordedNames;
+  }
+
+  /// Get stats for ForgotScreen: departed count, total forgot count.
+  Future<({int departedCount, int forgotCount})> getForgotStats() async {
+    final departedExp = db.packSessions.id.count();
+    final depQuery = db.selectOnly(db.packSessions)
+      ..addColumns([departedExp])
+      ..where(db.packSessions.status.equals('departed'));
+    final departedCount = await depQuery.map((row) => row.read(departedExp)).getSingleOrNull() ?? 0;
+
+    final forgotExp = db.forgotRecords.id.count();
+    final forgotQuery = db.selectOnly(db.forgotRecords)..addColumns([forgotExp]);
+    final forgotCount = await forgotQuery.map((row) => row.read(forgotExp)).getSingleOrNull() ?? 0;
+
+    return (departedCount: departedCount, forgotCount: forgotCount);
+  }
+
+  /// Get top forgotten items ranking (Section 5.5).
+  Future<List<({GlobalItem item, bool isHighRisk})>> getTopForgottenItems() async {
+    final items = await (db.select(db.globalItems)
+          ..where((t) => t.forgotCount.isBiggerThanValue(0))
+          ..orderBy([(t) => OrderingTerm.desc(t.forgotCount)]))
+        .get();
+
+    final List<({GlobalItem item, bool isHighRisk})> results = [];
+    for (final item in items) {
+      final isHighRisk = await checkIfItemIsHighRisk(item.id);
+      results.add((item: item, isHighRisk: isHighRisk));
+    }
+    return results;
+  }
+
+  /// Get recent forgot timeline (Section 5.5).
+  Future<List<({ForgotRecord record, String itemName, String itemEmoji, String? listName})>>
+      getRecentForgotRecords() async {
+    final records = await (db.select(db.forgotRecords)
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .get();
+
+    final List<({ForgotRecord record, String itemName, String itemEmoji, String? listName})>
+        results = [];
+
+    for (final rec in records) {
+      final gItem = await (db.select(db.globalItems)
+            ..where((t) => t.id.equals(rec.globalItemId)))
+          .getSingleOrNull();
+      final checklist = rec.listId != null ? await getChecklist(rec.listId!) : null;
+
+      results.add((
+        record: rec,
+        itemName: gItem?.displayName ?? '未知物品',
+        itemEmoji: gItem?.emoji ?? '📦',
+        listName: checklist?.name,
+      ));
+    }
+
+    return results;
+  }
+
+  /// Delete a forgot record (swipe left).
+  Future<void> deleteForgotRecord(String recordId) async {
+    final rec = await (db.select(db.forgotRecords)..where((t) => t.id.equals(recordId)))
+        .getSingleOrNull();
+    if (rec == null) return;
+
+    await (db.delete(db.forgotRecords)..where((t) => t.id.equals(recordId))).go();
+
+    // Recalculate global item forgot count and lastForgotAt
+    final remaining = await (db.select(db.forgotRecords)
+          ..where((t) => t.globalItemId.equals(rec.globalItemId))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .get();
+
+    await (db.update(db.globalItems)..where((t) => t.id.equals(rec.globalItemId))).write(
+      GlobalItemsCompanion(
+        forgotCount: Value(remaining.length),
+        lastForgotAt: Value(remaining.isEmpty ? null : remaining.first.createdAt),
+      ),
+    );
+  }
+
+  /// Clear all forgot records (Section 5.7).
+  Future<void> clearAllForgotRecords() async {
+    await db.delete(db.forgotRecords).go();
+    await (db.update(db.globalItems)).write(
+      const GlobalItemsCompanion(
+        forgotCount: Value(0),
+        lastForgotAt: Value(null),
+      ),
+    );
   }
 
   /// Watch all checklist summaries, ordered by sortOrder.

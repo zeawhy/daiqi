@@ -46,7 +46,7 @@ class SessionRules {
   }
 
   /// Calculate consecutive zero-forgot count according to Section 7.4.
-  /// [departedSessions]: Chronologically descending (newest first) departed sessions.
+  /// [sessionHadForgotRecordDescending]: Chronologically descending (newest first) departed sessions.
   /// Each session has information on whether an associated forgot record exists within 24h.
   static int calculateStreakZeroForgot(List<bool> sessionHadForgotRecordDescending) {
     int streak = 0;
@@ -55,6 +55,30 @@ class SessionRules {
         streak++;
       } else {
         break;
+      }
+    }
+    return streak;
+  }
+
+  /// Calculate streak zero forgot including departed_incomplete handling.
+  /// [sessionsDescending]: Chronologically descending list of departed sessions.
+  /// - 'departed_incomplete' interrupts streak
+  /// - 'departed' with hadForgot=true interrupts streak
+  /// - 'departed' with hadForgot=false increments streak
+  static int calculateStreak({
+    required List<({String status, bool hadForgot})> sessionsDescending,
+  }) {
+    int streak = 0;
+    for (final session in sessionsDescending) {
+      if (session.status == 'departed_incomplete') {
+        break;
+      }
+      if (session.status == 'departed') {
+        if (session.hadForgot) {
+          break;
+        } else {
+          streak++;
+        }
       }
     }
     return streak;
