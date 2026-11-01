@@ -26,7 +26,7 @@ class MnemonicBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.secondaryBg.withOpacity(0.5),
+        color: AppColors.secondaryBg.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -115,7 +115,7 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: widget.isPacked ? AppColors.primary : AppColors.textSecondary.withOpacity(0.5),
+              color: widget.isPacked ? AppColors.primary : AppColors.textSecondary.withValues(alpha: 0.5),
             ),
           ),
         );

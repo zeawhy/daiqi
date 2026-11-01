@@ -48,15 +48,15 @@ class BackpackPainter extends CustomPainter {
     )!;
 
     final Color waterColor = Color.lerp(
-      AppColors.primary.withOpacity(0.85),
-      AppColors.done.withOpacity(0.85),
+      AppColors.primary.withValues(alpha: 0.85),
+      AppColors.done.withValues(alpha: 0.85),
       doneTransition,
     )!;
 
     // 1. Draw Glow if entering drop zone
     if (showGlow || isOpen) {
       final glowPaint = Paint()
-        ..color = AppColors.primary.withOpacity(0.22)
+        ..color = AppColors.primary.withValues(alpha: 0.22)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
       final glowRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(4, bodyTop + 4, width - 8, bodyHeight - 8),
@@ -148,7 +148,7 @@ class BackpackPainter extends CustomPainter {
     final double zipperSpan = zipperRight - zipperLeft;
 
     final zipperLinePaint = Paint()
-      ..color = AppColors.backpackHardware.withOpacity(0.55)
+      ..color = AppColors.backpackHardware.withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
       ..strokeWidth = max(1.5, width * 0.016);
 
@@ -192,7 +192,7 @@ class BackpackPainter extends CustomPainter {
 
     // 6. Draw Smile Face (笑脸) when done
     if (smileOpacity > 0.0) {
-      final faceColor = Colors.white.withOpacity(smileOpacity);
+      final faceColor = Colors.white.withValues(alpha: smileOpacity);
       final facePaint = Paint()
         ..color = faceColor
         ..style = PaintingStyle.fill;

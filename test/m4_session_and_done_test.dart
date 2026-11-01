@@ -112,8 +112,8 @@ void main() {
       final router = GoRouter(
         initialLocation: '/test',
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const Scaffold(body: Text('Home'))),
-          GoRoute(path: '/test', builder: (_, __) => homeWidget),
+          GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('Home'))),
+          GoRoute(path: '/test', builder: (_, _) => homeWidget),
         ],
       );
       return UncontrolledProviderScope(
@@ -245,8 +245,8 @@ void main() {
       final router = GoRouter(
         initialLocation: '/test',
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const Scaffold(body: Text('Home'))),
-          GoRoute(path: '/test', builder: (_, __) => homeWidget),
+          GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('Home'))),
+          GoRoute(path: '/test', builder: (_, _) => homeWidget),
         ],
       );
       return UncontrolledProviderScope(

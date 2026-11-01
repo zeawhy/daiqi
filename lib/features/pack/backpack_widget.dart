@@ -44,6 +44,8 @@ class BackpackWidgetState extends State<BackpackWidget>
   late AnimationController _colorController;
   late AnimationController _smileController;
   bool _isPlayingSequence = false;
+  VoidCallback? _pendingOnZipperStart;
+  VoidCallback? _pendingOnCompleted;
 
   @override
   void initState() {
@@ -121,11 +123,7 @@ class BackpackWidgetState extends State<BackpackWidget>
       _animateWaterLevel(widget.progress);
     }
 
-    if (widget.isDone && !oldWidget.isDone) {
-      if (!_isPlayingSequence && _smileController.value < 1.0) {
-        playAllPackedSequence();
-      }
-    } else if (!widget.isDone && oldWidget.isDone) {
+    if (!widget.isDone && oldWidget.isDone) {
       _colorController.value = 0.0;
       _smileController.value = 0.0;
       _zipperController.value = 1.0;
@@ -154,6 +152,8 @@ class BackpackWidgetState extends State<BackpackWidget>
   /// Plays all packed sequence:
   /// wait 300ms -> zipper slide left to right (600ms) -> color green (300ms) -> smile fade in
   Future<void> playAllPackedSequence({VoidCallback? onZipperStart, VoidCallback? onCompleted}) async {
+    if (onZipperStart != null) _pendingOnZipperStart = onZipperStart;
+    if (onCompleted != null) _pendingOnCompleted = onCompleted;
     if (_isPlayingSequence) return;
     _isPlayingSequence = true;
 
@@ -162,14 +162,16 @@ class BackpackWidgetState extends State<BackpackWidget>
         _colorController.value = 1.0;
         _smileController.value = 1.0;
         _zipperController.value = 1.0;
-        onCompleted?.call();
+        _pendingOnCompleted?.call();
+        _pendingOnCompleted = null;
         return;
       }
 
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
 
-      onZipperStart?.call();
+      _pendingOnZipperStart?.call();
+      _pendingOnZipperStart = null;
       _zipperController.reset();
       await _zipperController.forward();
       if (!mounted) return;
@@ -180,7 +182,8 @@ class BackpackWidgetState extends State<BackpackWidget>
       await _smileController.forward();
       if (!mounted) return;
 
-      onCompleted?.call();
+      _pendingOnCompleted?.call();
+      _pendingOnCompleted = null;
     } finally {
       _isPlayingSequence = false;
     }
@@ -222,7 +225,7 @@ class BackpackWidgetState extends State<BackpackWidget>
 
         return Transform(
           alignment: Alignment.bottomCenter,
-          transform: Matrix4.identity()..scale(scaleX, scaleY),
+          transform: Matrix4.diagonal3Values(scaleX, scaleY, 1.0),
           child: CustomPaint(
             size: Size(widget.width, widget.height),
             painter: BackpackPainter(

@@ -33,7 +33,10 @@ class _PackScreenState extends ConsumerState<PackScreen>
   bool _isLoading = true;
 
   // Pointer drag state
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _gridAreaKey = GlobalKey();
   PackItemModel? _draggingItem;
+  int? _activePointerId;
   Offset? _dragStartPointer;
   Offset? _currentPointer;
   Offset? _cardSlotOffset;
@@ -78,6 +81,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _flightController?.dispose();
     super.dispose();
   }
@@ -127,7 +131,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
   // --- Pointer Drag Implementation (> 8pt start drag, tilt ±10°) ---
 
   void _onPointerDown(PointerDownEvent event, PackItemModel item) {
-    if (item.isPacked || item.isSkipped || _flyingItem != null) return;
+    if (item.isSkipped || _flyingItem != null) return;
+    if (_activePointerId != null) return; // Ignore second finger (Section 11)
+    _activePointerId = event.pointer;
     _dragStartPointer = event.position;
     _currentPointer = event.position;
     _cardSlotOffset = _getItemGlobalPosition(item.listItemId);
@@ -135,7 +141,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
   }
 
   void _onPointerMove(PointerMoveEvent event, PackItemModel item) {
+    if (event.pointer != _activePointerId) return;
     if (_dragStartPointer == null) return;
+    if (item.isPacked) return; // Packed items cannot be dragged
 
     final distance = (event.position - _dragStartPointer!).distance;
 
@@ -163,11 +171,41 @@ class _PackScreenState extends ConsumerState<PackScreen>
           HapticService.selection();
         }
       }
+
+      // Auto-scroll when dragging near grid edges (Section 11)
+      _checkAutoScroll(event.position);
+
       setState(() {});
     }
   }
 
+  void _checkAutoScroll(Offset globalPointer) {
+    if (!_scrollController.hasClients) return;
+    final RenderBox? gridBox = _gridAreaKey.currentContext?.findRenderObject() as RenderBox?;
+    if (gridBox == null) return;
+    final gridPos = gridBox.localToGlobal(Offset.zero);
+    final gridHeight = gridBox.size.height;
+
+    const edgeThreshold = 60.0;
+    final pointerY = globalPointer.dy;
+
+    if (pointerY >= gridPos.dy && pointerY <= gridPos.dy + edgeThreshold) {
+      // Near top edge: scroll up
+      final target = (_scrollController.offset - 15.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+      if (target != _scrollController.offset) {
+        _scrollController.jumpTo(target);
+      }
+    } else if (pointerY <= gridPos.dy + gridHeight && pointerY >= gridPos.dy + gridHeight - edgeThreshold) {
+      // Near bottom edge: scroll down
+      final target = (_scrollController.offset + 15.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+      if (target != _scrollController.offset) {
+        _scrollController.jumpTo(target);
+      }
+    }
+  }
+
   void _onPointerUp(PointerUpEvent event, PackItemModel item) {
+    if (event.pointer != _activePointerId) return;
     if (_draggingItem != null) {
       _handleDragEnd(item);
     } else {
@@ -178,6 +216,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
   }
 
   void _onPointerCancel(PointerCancelEvent event, PackItemModel item) {
+    if (event.pointer != _activePointerId) return;
     if (_draggingItem != null) {
       _handleFlyBack(_draggingItem!);
     }
@@ -185,6 +224,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
   }
 
   void _resetDragState() {
+    _activePointerId = null;
     _dragStartPointer = null;
     _currentPointer = null;
     _cardSlotOffset = null;
@@ -650,7 +690,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
                                           departedAt: DateTime.now().toUtc(),
                                         );
                                   }
-                                  if (mounted) context.go('/');
+                                  if (context.mounted) {
+                                    context.go('/');
+                                  }
                                 },
                                 child: const Text(
                                   '直接出门',
@@ -691,9 +733,11 @@ class _PackScreenState extends ConsumerState<PackScreen>
                       child: IgnorePointer(
                         child: Transform(
                           alignment: Alignment.center,
-                          transform: Matrix4.identity()
-                            ..scale(reducedMotion ? 1.0 : 1.08)
-                            ..rotateZ(reducedMotion ? 0.0 : _tiltAngle),
+                          transform: Matrix4.diagonal3Values(
+                            reducedMotion ? 1.0 : 1.08,
+                            reducedMotion ? 1.0 : 1.08,
+                            1.0,
+                          )..rotateZ(reducedMotion ? 0.0 : _tiltAngle),
                           child: ItemCardWidget(
                             item: _draggingItem!,
                             isDragged: true,
@@ -800,16 +844,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
             ),
           ),
           const SizedBox(height: 4),
-          if (allSkipped)
-            const Text(
-              '今天什么都不带吗？',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            )
-          else if (isAllPacked)
+          if (isAllPacked)
             const Text(
               '全部装好了',
               style: TextStyle(
@@ -818,7 +853,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                 color: AppColors.done,
               ),
             )
-          else
+          else if (!allSkipped)
             RichText(
               text: TextSpan(
                 style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
@@ -842,6 +877,8 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   Widget _buildItemsList(List<PackItemModel> items, List<PackItemModel> unpackedHighRisk) {
     return SingleChildScrollView(
+      key: _gridAreaKey,
+      controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -890,7 +927,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
               decoration: BoxDecoration(
                 color: AppColors.dangerLight,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [

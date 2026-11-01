@@ -30,7 +30,7 @@ class ItemCardWidget extends StatelessWidget {
         child: Container(
           height: 86,
           decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.3),
+            color: AppColors.primaryLight.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(14),
           ),
         ),
@@ -148,7 +148,7 @@ class ItemCardWidget extends StatelessWidget {
     required bool isHighRisk,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
@@ -157,7 +157,7 @@ class ItemCardWidget extends StatelessWidget {
             opacity: isPacked ? 0.35 : 1.0,
             child: Text(
               item.emoji,
-              style: const TextStyle(fontSize: 28),
+              style: const TextStyle(fontSize: 26),
             ),
           ),
           const SizedBox(height: 2),
@@ -167,7 +167,8 @@ class ItemCardWidget extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12,
+              height: 1.2,
               fontWeight: FontWeight.w500,
               decoration: isSkipped ? TextDecoration.lineThrough : null,
               color: isPacked || isSkipped ? AppColors.textSecondary : AppColors.textPrimary,
