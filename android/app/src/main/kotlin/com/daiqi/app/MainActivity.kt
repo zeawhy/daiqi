@@ -1,4 +1,4 @@
-package com.daiqi.daiqi
+package com.daiqi.app
 
 import io.flutter.embedding.android.FlutterActivity
 
