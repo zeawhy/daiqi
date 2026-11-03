@@ -23,11 +23,19 @@ class MnemonicBar extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.secondaryBg.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -35,7 +43,6 @@ class MnemonicBar extends StatelessWidget {
         children: List.generate(chars.length, (index) {
           final char = chars[index];
           // Check if item at index is packed
-          // We find the item by sortOrder == index
           final item = items.firstWhere(
             (i) => i.sortOrder == index,
             orElse: () => items[index],
@@ -43,7 +50,7 @@ class MnemonicBar extends StatelessWidget {
           final isPacked = item.isPacked;
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 5),
             child: _MnemonicCharWidget(
               char: char,
               isPacked: isPacked,
@@ -81,12 +88,13 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 420),
     );
     _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.3), weight: 50),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.32), weight: 45),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.32, end: 0.94), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.94, end: 1.0), weight: 25),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
   }
 
   @override
@@ -110,12 +118,35 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
       builder: (context, child) {
         return Transform.scale(
           scale: widget.reducedMotion ? 1.0 : _scaleAnimation.value,
-          child: Text(
-            widget.char,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: widget.isPacked ? AppColors.primary : AppColors.textSecondary.withValues(alpha: 0.5),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              gradient: widget.isPacked ? AppColors.primaryGradient : null,
+              color: widget.isPacked ? null : AppColors.secondaryBg,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: widget.isPacked
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.28),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : const [],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              widget.char,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: widget.isPacked
+                    ? Colors.white
+                    : AppColors.textSecondary.withValues(alpha: 0.65),
+              ),
             ),
           ),
         );
