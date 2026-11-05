@@ -40,10 +40,10 @@ void main() {
 
       expect(find.text('钥匙'), findsOneWidget);
       expect(find.text('🔑'), findsOneWidget);
-      expect(find.text('!'), findsNothing);
+      expect(find.text('必带'), findsNothing);
     });
 
-    testWidgets('renders high-risk item card with exclamation mark', (tester) async {
+    testWidgets('renders high-risk item card with 必带 badge', (tester) async {
       const item = PackItemModel(
         listItemId: 'item-2',
         globalItemId: 'g-2',
@@ -64,7 +64,7 @@ void main() {
       );
 
       expect(find.text('身份证'), findsOneWidget);
-      expect(find.text('!'), findsOneWidget);
+      expect(find.text('必带'), findsOneWidget);
     });
 
     testWidgets('renders packed card with dimmed style', (tester) async {
@@ -90,7 +90,7 @@ void main() {
       expect(find.text('手机'), findsOneWidget);
       // Finding the opacity widget for packed emoji
       final opacityFinder = find.byWidgetPredicate(
-        (widget) => widget is Opacity && widget.opacity == 0.35,
+        (widget) => widget is Opacity && widget.opacity == 0.45,
       );
       expect(opacityFinder, findsOneWidget);
     });
@@ -134,6 +134,88 @@ void main() {
 
       expect(find.text('身'), findsOneWidget);
       expect(find.text('手'), findsOneWidget);
+    });
+
+    testWidgets(
+        'packing items in 身手钥钱 triggers full 420ms scale animation without throwing or ErrorWidget',
+        (tester) async {
+      List<PackItemModel> buildItems({int packedCount = 0}) => [
+            PackItemModel(
+              listItemId: '1',
+              globalItemId: 'g1',
+              name: '身份证',
+              emoji: '🆔',
+              sortOrder: 0,
+              isPacked: packedCount >= 1,
+              isHighRisk: false,
+              isSkipped: false,
+            ),
+            PackItemModel(
+              listItemId: '2',
+              globalItemId: 'g2',
+              name: '手机',
+              emoji: '📱',
+              sortOrder: 1,
+              isPacked: packedCount >= 2,
+              isHighRisk: false,
+              isSkipped: false,
+            ),
+            PackItemModel(
+              listItemId: '3',
+              globalItemId: 'g3',
+              name: '钥匙',
+              emoji: '🔑',
+              sortOrder: 2,
+              isPacked: packedCount >= 3,
+              isHighRisk: false,
+              isSkipped: false,
+            ),
+            PackItemModel(
+              listItemId: '4',
+              globalItemId: 'g4',
+              name: '钱包',
+              emoji: '👛',
+              sortOrder: 3,
+              isPacked: packedCount >= 4,
+              isHighRisk: false,
+              isSkipped: false,
+            ),
+          ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MnemonicBar(
+              mnemonic: '身手钥钱',
+              items: buildItems(packedCount: 0),
+            ),
+          ),
+        ),
+      );
+
+      for (final ch in ['身', '手', '钥', '钱']) {
+        expect(find.text(ch), findsOneWidget);
+      }
+
+      // Pack each of the 4 items one by one and step through the 420ms TweenSequence scale animation
+      for (int count = 1; count <= 4; count++) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MnemonicBar(
+                mnemonic: '身手钥钱',
+                items: buildItems(packedCount: count),
+              ),
+            ),
+          ),
+        );
+
+        for (int ms = 0; ms <= 450; ms += 30) {
+          await tester.pump(const Duration(milliseconds: 30));
+          expect(tester.takeException(), isNull);
+          expect(find.byType(ErrorWidget), findsNothing);
+        }
+      }
     });
   });
 
@@ -210,6 +292,21 @@ void main() {
       );
     }
 
+    /// Advances frames in fixed increments instead of [WidgetTester.pumpAndSettle]
+    /// because [BackpackWidget] runs a continuous `_waveController.repeat()` loop
+    /// when `reducedMotion` is false.
+    Future<void> pumpFrames(
+      WidgetTester tester, {
+      Duration total = const Duration(milliseconds: 500),
+      Duration step = const Duration(milliseconds: 50),
+    }) async {
+      var elapsed = Duration.zero;
+      while (elapsed < total) {
+        await tester.pump(step);
+        elapsed += step;
+      }
+    }
+
     testWidgets('Click unpacked card to pack item, and click packed card to unpack',
         (WidgetTester tester) async {
       // Dispose the container explicitly and flush its zero-duration
@@ -229,20 +326,28 @@ void main() {
 
       await tester.pumpWidget(createTestApp());
       // Wait for session and stream to load
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
-      // Check initial state: "还差 4 件"
+      // Check initial state: "还差 4 件" + mnemonic bar "身手钥钱"
       expect(find.text('身份证'), findsOneWidget);
       expect(find.text('手机'), findsOneWidget);
       expect(find.text('钥匙'), findsOneWidget);
       expect(find.text('钱包'), findsOneWidget);
+      expect(find.byType(MnemonicBar), findsOneWidget);
       expect(find.text('0 / 4'), findsOneWidget);
 
-      // 1. Click unpacked card "身份证" -> Fast pack
+      // 1. Click unpacked card "身份证" -> Fast pack + MnemonicBar scale animation
       await tester.tap(find.text('身份证'));
       await tester.pump(); // animation start
       await tester.pump(const Duration(milliseconds: 500)); // complete flight animation
-      await tester.pumpAndSettle();
+      await pumpFrames(
+        tester,
+        total: const Duration(milliseconds: 500),
+        step: const Duration(milliseconds: 30),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ErrorWidget), findsNothing);
 
       // Verify packed count increased: "1 / 4"
       expect(find.text('1 / 4'), findsOneWidget);
@@ -251,7 +356,7 @@ void main() {
       await tester.tap(find.text('身份证'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Verify packed count back to "0 / 4"
       expect(find.text('0 / 4'), findsOneWidget);
@@ -272,7 +377,7 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       expect(find.text('0 / 4'), findsOneWidget);
 
@@ -300,7 +405,7 @@ void main() {
       await gesture.up();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Verify item packed
       expect(find.text('1 / 4'), findsOneWidget);
@@ -321,7 +426,7 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       expect(find.text('0 / 4'), findsOneWidget);
 
@@ -340,7 +445,7 @@ void main() {
       await gesture.up();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Remains unpacked
       expect(find.text('0 / 4'), findsOneWidget);

@@ -94,7 +94,7 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
       TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.32), weight: 45),
       TweenSequenceItem(tween: Tween<double>(begin: 1.32, end: 0.94), weight: 30),
       TweenSequenceItem(tween: Tween<double>(begin: 0.94, end: 1.0), weight: 25),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override
