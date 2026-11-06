@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'backpack_painter.dart';
 
@@ -35,6 +36,9 @@ class BackpackWidgetState extends State<BackpackWidget>
   late Animation<double> _waterAnimation;
   double _lastProgress = 0.0;
 
+  // Continuous wave sloshing & idle breathing controller
+  late AnimationController _waveController;
+
   // Hover open animation
   late AnimationController _hoverController;
   late Animation<double> _hoverScaleAnimation;
@@ -52,40 +56,49 @@ class BackpackWidgetState extends State<BackpackWidget>
     super.initState();
     _lastProgress = widget.progress;
 
-    // Hover scale (1.0 -> 1.06)
+    // Continuous wave phase animation (2.4s loop)
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+    if (!widget.reducedMotion) {
+      _waveController.repeat();
+    }
+
+    // Hover scale (1.0 -> 1.07)
     _hoverController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 220),
     );
-    _hoverScaleAnimation = Tween<double>(begin: 1.0, end: 1.06).animate(
+    _hoverScaleAnimation = Tween<double>(begin: 1.0, end: 1.07).animate(
       CurvedAnimation(parent: _hoverController, curve: Curves.easeOutBack),
     );
 
-    // Squish-bounce (1 -> 0.92 -> 1.04 -> 1, horizontal inverse)
+    // Squish-bounce (1 -> 0.90 -> 1.06 -> 1, horizontal inverse)
     _squishController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 380),
     );
 
     _squishYAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.92), weight: 35),
-      TweenSequenceItem(tween: Tween<double>(begin: 0.92, end: 1.04), weight: 35),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.04, end: 1.0), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.90), weight: 35),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.90, end: 1.06), weight: 35),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.06, end: 1.0), weight: 30),
     ]).animate(CurvedAnimation(parent: _squishController, curve: Curves.easeInOut));
 
     _squishXAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.08), weight: 35),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.08, end: 0.96), weight: 35),
-      TweenSequenceItem(tween: Tween<double>(begin: 0.96, end: 1.0), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.10), weight: 35),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.10, end: 0.95), weight: 35),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.95, end: 1.0), weight: 30),
     ]).animate(CurvedAnimation(parent: _squishController, curve: Curves.easeInOut));
 
-    // Water level (300ms easeOut)
+    // Water level (340ms easeOutCubic)
     _waterController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 340),
     );
     _waterAnimation = Tween<double>(begin: widget.progress, end: widget.progress)
-        .animate(CurvedAnimation(parent: _waterController, curve: Curves.easeOut));
+        .animate(CurvedAnimation(parent: _waterController, curve: Curves.easeOutCubic));
 
     // All packed animations
     _zipperController = AnimationController(
@@ -96,13 +109,13 @@ class BackpackWidgetState extends State<BackpackWidget>
 
     _colorController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 320),
       value: widget.isDone ? 1.0 : 0.0,
     );
 
     _smileController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 380),
       value: widget.isDone ? 1.0 : 0.0,
     );
   }
@@ -110,6 +123,14 @@ class BackpackWidgetState extends State<BackpackWidget>
   @override
   void didUpdateWidget(covariant BackpackWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (widget.reducedMotion != oldWidget.reducedMotion) {
+      if (widget.reducedMotion) {
+        _waveController.stop();
+      } else if (!_waveController.isAnimating) {
+        _waveController.repeat();
+      }
+    }
 
     if (widget.isOpen != oldWidget.isOpen) {
       if (widget.isOpen) {
@@ -137,20 +158,20 @@ class BackpackWidgetState extends State<BackpackWidget>
       return;
     }
     _waterAnimation = Tween<double>(begin: _lastProgress, end: target).animate(
-      CurvedAnimation(parent: _waterController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _waterController, curve: Curves.easeOutCubic),
     );
     _lastProgress = target;
     _waterController.forward(from: 0.0);
   }
 
-  /// Triggers the 350ms squish-bounce animation when item drops in
+  /// Triggers the squish-bounce animation when item drops in
   void triggerSquishBounce() {
     if (widget.reducedMotion) return;
     _squishController.forward(from: 0.0);
   }
 
   /// Plays all packed sequence:
-  /// wait 300ms -> zipper slide left to right (600ms) -> color green (300ms) -> smile fade in
+  /// wait 300ms -> zipper slide left to right (600ms) -> color green (320ms) -> smile fade in
   Future<void> playAllPackedSequence({VoidCallback? onZipperStart, VoidCallback? onCompleted}) async {
     if (onZipperStart != null) _pendingOnZipperStart = onZipperStart;
     if (onCompleted != null) _pendingOnCompleted = onCompleted;
@@ -191,6 +212,7 @@ class BackpackWidgetState extends State<BackpackWidget>
 
   @override
   void dispose() {
+    _waveController.dispose();
     _squishController.dispose();
     _waterController.dispose();
     _hoverController.dispose();
@@ -207,6 +229,7 @@ class BackpackWidgetState extends State<BackpackWidget>
 
     return AnimatedBuilder(
       animation: Listenable.merge([
+        _waveController,
         _hoverScaleAnimation,
         _squishYAnimation,
         _squishXAnimation,
@@ -216,9 +239,12 @@ class BackpackWidgetState extends State<BackpackWidget>
         _smileController,
       ]),
       builder: (context, child) {
+        final double breath = widget.reducedMotion
+            ? 1.0
+            : 1.0 + sin(_waveController.value * 2 * pi) * 0.012;
         final double scaleY = widget.reducedMotion
             ? 1.0
-            : _hoverScaleAnimation.value * _squishYAnimation.value;
+            : _hoverScaleAnimation.value * _squishYAnimation.value * breath;
         final double scaleX = widget.reducedMotion
             ? 1.0
             : _hoverScaleAnimation.value * _squishXAnimation.value * bulgeFactor;
@@ -236,6 +262,7 @@ class BackpackWidgetState extends State<BackpackWidget>
               zipperProgress: _zipperController.value,
               smileOpacity: _smileController.value,
               showGlow: widget.isOpen,
+              wavePhase: _waveController.value * 2 * pi,
             ),
           ),
         );

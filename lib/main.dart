@@ -17,13 +17,16 @@ final ValueNotifier<String?> crashStackNotifier =
     ValueNotifier<String?>(null);
 
 void _reportCrash(Object error, StackTrace? stack) {
-  // Only keep the first error: later cascade errors would hide the cause.
-  // Set the stack BEFORE the error notifier: flipping the error notifier
-  // rebuilds listeners synchronously, and they read the stack on that pass.
-  if (crashNotifier.value == null) {
-    crashStackNotifier.value = stack?.toString();
-    crashNotifier.value = error;
-  }
+  if (crashNotifier.value != null) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Only keep the first error: later cascade errors would hide the cause.
+    // Set the stack BEFORE the error notifier: flipping the error notifier
+    // rebuilds listeners synchronously, and they read the stack on that pass.
+    if (crashNotifier.value == null) {
+      crashStackNotifier.value = stack?.toString();
+      crashNotifier.value = error;
+    }
+  });
 }
 
 void main() {

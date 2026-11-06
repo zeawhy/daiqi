@@ -10,6 +10,7 @@ class BackpackPainter extends CustomPainter {
   final double zipperProgress; // 0.0 (left) to 1.0 (right closed)
   final double smileOpacity; // 0.0 to 1.0
   final bool showGlow;
+  final double wavePhase; // Continuous phase (0 to 2*pi) for dynamic wave sloshing
 
   BackpackPainter({
     required this.progress,
@@ -19,6 +20,7 @@ class BackpackPainter extends CustomPainter {
     this.zipperProgress = 1.0,
     this.smileOpacity = 0.0,
     this.showGlow = false,
+    this.wavePhase = 0.0,
   });
 
   @override
@@ -32,7 +34,7 @@ class BackpackPainter extends CustomPainter {
     final double bodyTop = handleHeight * 0.75;
     final double bodyBottom = height;
     final double bodyHeight = bodyBottom - bodyTop;
-    final double cornerRadius = width * 0.16;
+    final double cornerRadius = width * 0.18;
 
     // Interpolated colors
     final Color strokeColor = Color.lerp(
@@ -48,16 +50,25 @@ class BackpackPainter extends CustomPainter {
     )!;
 
     final Color waterColor = Color.lerp(
-      AppColors.primary.withValues(alpha: 0.85),
-      AppColors.done.withValues(alpha: 0.85),
+      AppColors.primary.withValues(alpha: 0.88),
+      AppColors.done.withValues(alpha: 0.88),
       doneTransition,
     )!;
 
-    // 1. Draw Glow if entering drop zone
-    if (showGlow || isOpen) {
-      final glowPaint = Paint()
-        ..color = AppColors.primary.withValues(alpha: 0.22)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
+    final Color backWaveColor = Color.lerp(
+      AppColors.primary.withValues(alpha: 0.42),
+      AppColors.done.withValues(alpha: 0.42),
+      doneTransition,
+    )!;
+
+    // 1. Draw Aura Glow if hovered, dragged over, or done
+    if (showGlow || isOpen || doneTransition > 0.2) {
+      final Color glowColor = doneTransition > 0.2
+          ? AppColors.done.withValues(alpha: 0.28 * doneTransition)
+          : AppColors.primary.withValues(alpha: 0.26);
+      final Paint glowPaint = Paint()
+        ..color = glowColor
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
       final glowRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(4, bodyTop + 4, width - 8, bodyHeight - 8),
         Radius.circular(cornerRadius + 4),
@@ -121,24 +132,93 @@ class BackpackPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawPath(bodyPath, bgPaint);
 
-    // 4. Draw Water Level Fill (填充水位)
+    // 4. Draw Water Level Fill: dynamic dual sine-wave liquid (填充水位)
     if (progress > 0.0) {
       canvas.save();
       canvas.clipPath(bodyPath);
 
-      final fillHeight = (bodyHeight - 2) * progress.clamp(0.0, 1.0);
-      final fillTop = bodyBottom - fillHeight;
+      final double clampedProgress = progress.clamp(0.0, 1.0);
+      final fillHeight = (bodyHeight - 2) * clampedProgress;
+      final waterTop = bodyBottom - fillHeight;
 
-      final waterPaint = Paint()
-        ..color = waterColor
-        ..style = PaintingStyle.fill;
+      if (fillHeight > 0) {
+        final double waveAmp = (clampedProgress > 0.02 && clampedProgress < 0.98)
+            ? (height * 0.026)
+            : (height * 0.006);
 
-      // Draw subtle wave or smooth horizontal fill
-      canvas.drawRect(
-        Rect.fromLTWH(0, fillTop, width, fillHeight + 10),
-        waterPaint,
-      );
+        // Back wave (secondary crest)
+        final Path backWavePath = Path()..moveTo(0, bodyBottom);
+        for (double x = 0; x <= width; x += 4) {
+          final double y = waterTop +
+              sin((x / width * 2 * pi) - wavePhase + 1.2) * (waveAmp * 1.15);
+          backWavePath.lineTo(x, y);
+        }
+        backWavePath.lineTo(width, bodyBottom);
+        backWavePath.close();
+        canvas.drawPath(backWavePath, Paint()..color = backWaveColor);
+
+        // Front wave (primary liquid)
+        final Path frontWavePath = Path()..moveTo(0, bodyBottom);
+        for (double x = 0; x <= width; x += 4) {
+          final double y =
+              waterTop + sin((x / width * 2 * pi) + wavePhase) * waveAmp;
+          frontWavePath.lineTo(x, y);
+        }
+        frontWavePath.lineTo(width, bodyBottom);
+        frontWavePath.close();
+        canvas.drawPath(frontWavePath, Paint()..color = waterColor);
+
+        // Rising effervescent bubbles inside liquid when width >= 80
+        if (width >= 80 && clampedProgress > 0.15) {
+          final Paint bubblePaint = Paint()
+            ..color = Colors.white.withValues(alpha: 0.28)
+            ..style = PaintingStyle.fill;
+          for (int i = 0; i < 4; i++) {
+            final double bx = width * (0.22 + i * 0.19);
+            final double cycle = ((wavePhase / (2 * pi)) + i * 0.27) % 1.0;
+            final double by = bodyBottom - (fillHeight * 0.85 * cycle);
+            if (by > waterTop + 6) {
+              canvas.drawCircle(Offset(bx, by), 2.5 + (i % 2) * 1.5, bubblePaint);
+            }
+          }
+        }
+      }
       canvas.restore();
+    }
+
+    // Subtle 3D inner highlight along top-left edge
+    final Paint highlightPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromLTWH(bodyRRect.left + 2, bodyTop + 6, cornerRadius * 1.4,
+          cornerRadius * 1.4),
+      pi,
+      pi * 0.45,
+      false,
+      highlightPaint,
+    );
+
+    // Front lower pocket seam detail (only on full-size backpack)
+    if (width >= 100) {
+      final RRect pocketRRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          width * 0.14,
+          bodyTop + bodyHeight * 0.62,
+          width * 0.72,
+          bodyHeight * 0.28,
+        ),
+        Radius.circular(cornerRadius * 0.55),
+      );
+      canvas.drawRRect(
+        pocketRRect,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.22)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8,
+      );
     }
 
     // 5. Draw Zipper (拉链)
@@ -201,9 +281,58 @@ class BackpackPainter extends CustomPainter {
       final double eyeDistance = width * 0.15;
       final double eyeRadius = max(3.5, width * 0.035);
 
-      // Left eye & right eye
-      canvas.drawCircle(Offset(width / 2 - eyeDistance, faceCenterY - 4), eyeRadius, facePaint);
-      canvas.drawCircle(Offset(width / 2 + eyeDistance, faceCenterY - 4), eyeRadius, facePaint);
+      if (width >= 80) {
+        // Happy curved eyes (^ ^) on full-size backpack
+        final Paint happyEyePaint = Paint()
+          ..color = faceColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(3.0, width * 0.03)
+          ..strokeCap = StrokeCap.round;
+        final double happyEyeRadius = max(5.5, width * 0.035);
+        canvas.drawArc(
+          Rect.fromCircle(
+              center: Offset(width / 2 - eyeDistance, faceCenterY - 2),
+              radius: happyEyeRadius),
+          pi * 1.1,
+          pi * 0.8,
+          false,
+          happyEyePaint,
+        );
+        canvas.drawArc(
+          Rect.fromCircle(
+              center: Offset(width / 2 + eyeDistance, faceCenterY - 2),
+              radius: happyEyeRadius),
+          pi * 1.1,
+          pi * 0.8,
+          false,
+          happyEyePaint,
+        );
+
+        // Rosy cheeks
+        final Paint cheekPaint = Paint()
+          ..color = AppColors.cheekPink.withValues(alpha: 0.65 * smileOpacity)
+          ..style = PaintingStyle.fill;
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(width * 0.31, faceCenterY - 1),
+            width: 11,
+            height: 6.5,
+          ),
+          cheekPaint,
+        );
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(width * 0.69, faceCenterY - 1),
+            width: 11,
+            height: 6.5,
+          ),
+          cheekPaint,
+        );
+      } else {
+        // Left eye & right eye
+        canvas.drawCircle(Offset(width / 2 - eyeDistance, faceCenterY - 4), eyeRadius, facePaint);
+        canvas.drawCircle(Offset(width / 2 + eyeDistance, faceCenterY - 4), eyeRadius, facePaint);
+      }
 
       // Smile mouth arc
       final mouthPaint = Paint()
@@ -218,6 +347,30 @@ class BackpackPainter extends CustomPainter {
         height: height * 0.12,
       );
       canvas.drawArc(mouthRect, 0.2 * pi, 0.6 * pi, false, mouthPaint);
+    } else if (isOpen && width >= 80) {
+      // Expectant "Feed Me!" expression when dragging item over backpack
+      final double faceCenterY = bodyTop + bodyHeight * 0.58;
+      final Color exprColor = progress.clamp(0.0, 1.0) > 0.55
+          ? Colors.white.withValues(alpha: 0.9)
+          : strokeColor.withValues(alpha: 0.75);
+      final Paint eyePaint = Paint()
+        ..color = exprColor
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(width * 0.39, faceCenterY - 4), 4.2, eyePaint);
+      canvas.drawCircle(Offset(width * 0.61, faceCenterY - 4), 4.2, eyePaint);
+
+      // Cute surprised "O" mouth
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(width / 2, faceCenterY + 6),
+          width: 11,
+          height: 13,
+        ),
+        Paint()
+          ..color = exprColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6,
+      );
     }
 
     // 7. Draw Body Stroke (4pt)
@@ -236,6 +389,7 @@ class BackpackPainter extends CustomPainter {
         oldDelegate.doneTransition != doneTransition ||
         oldDelegate.zipperProgress != zipperProgress ||
         oldDelegate.smileOpacity != smileOpacity ||
-        oldDelegate.showGlow != showGlow;
+        oldDelegate.showGlow != showGlow ||
+        oldDelegate.wavePhase != wavePhase;
   }
 }
