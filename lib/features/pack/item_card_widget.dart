@@ -182,10 +182,10 @@ class ItemCardWidget extends StatelessWidget {
           ),
           if (isHighRisk)
             Positioned(
-              top: 5,
-              right: 5,
+              top: 4,
+              right: 4,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
                 decoration: BoxDecoration(
                   color: AppColors.danger,
                   borderRadius: BorderRadius.circular(8),
@@ -195,7 +195,8 @@ class ItemCardWidget extends StatelessWidget {
                   '必带',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 9,
+                    fontSize: 10.5,
+                    height: 1.1,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
