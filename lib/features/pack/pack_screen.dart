@@ -37,6 +37,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
   final GlobalKey _gridAreaKey = GlobalKey();
   PackItemModel? _draggingItem;
   int? _activePointerId;
+  // Set when GestureDetector's long press wins for the current pointer, so that
+  // the Listener's raw pointer-up is not mistaken for a tap.
+  bool _longPressFired = false;
   Offset? _dragStartPointer;
   Offset? _currentPointer;
   Offset? _cardSlotOffset;
@@ -134,6 +137,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     if (item.isSkipped || _flyingItem != null) return;
     if (_activePointerId != null) return; // Ignore second finger (Section 11)
     _activePointerId = event.pointer;
+    _longPressFired = false;
     _dragStartPointer = event.position;
     _currentPointer = event.position;
     _cardSlotOffset = _getItemGlobalPosition(item.listItemId);
@@ -208,7 +212,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     if (event.pointer != _activePointerId) return;
     if (_draggingItem != null) {
       _handleDragEnd(item);
-    } else {
+    } else if (!_longPressFired) {
       // It was a simple tap without moving > 8pt!
       _handleCardTap(item);
     }
@@ -225,6 +229,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   void _resetDragState() {
     _activePointerId = null;
+    _longPressFired = false;
     _dragStartPointer = null;
     _currentPointer = null;
     _cardSlotOffset = null;
@@ -465,6 +470,10 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   /// Long press card -> modal menu (Section 6.3)
   void _handleCardLongPress(PackItemModel item) {
+    // Drag has priority: once the card is being dragged, a long press must not
+    // open the menu (the 8pt drag slop is smaller than the 18pt long-press slop).
+    if (_draggingItem != null || _flyingItem != null) return;
+    _longPressFired = true;
     showModalBottomSheet(
       context: context,
       builder: (context) {
