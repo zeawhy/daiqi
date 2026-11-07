@@ -416,7 +416,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.22),
+                                color: Colors.black.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(

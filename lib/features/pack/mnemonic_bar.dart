@@ -145,7 +145,7 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
                 fontWeight: FontWeight.w900,
                 color: widget.isPacked
                     ? Colors.white
-                    : AppColors.textSecondary.withValues(alpha: 0.65),
+                    : AppColors.textSecondary,
               ),
             ),
           ),

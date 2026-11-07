@@ -39,7 +39,7 @@ class BackpackPainter extends CustomPainter {
     // Interpolated colors
     final Color strokeColor = Color.lerp(
       AppColors.primary,
-      AppColors.done,
+      AppColors.doneAccent,
       doneTransition,
     )!;
 
@@ -51,20 +51,20 @@ class BackpackPainter extends CustomPainter {
 
     final Color waterColor = Color.lerp(
       AppColors.primary.withValues(alpha: 0.88),
-      AppColors.done.withValues(alpha: 0.88),
+      AppColors.doneAccent.withValues(alpha: 0.88),
       doneTransition,
     )!;
 
     final Color backWaveColor = Color.lerp(
       AppColors.primary.withValues(alpha: 0.42),
-      AppColors.done.withValues(alpha: 0.42),
+      AppColors.doneAccent.withValues(alpha: 0.42),
       doneTransition,
     )!;
 
     // 1. Draw Aura Glow if hovered, dragged over, or done
     if (showGlow || isOpen || doneTransition > 0.2) {
       final Color glowColor = doneTransition > 0.2
-          ? AppColors.done.withValues(alpha: 0.28 * doneTransition)
+          ? AppColors.doneAccent.withValues(alpha: 0.28 * doneTransition)
           : AppColors.primary.withValues(alpha: 0.26);
       final Paint glowPaint = Paint()
         ..color = glowColor

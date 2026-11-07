@@ -5,7 +5,7 @@ class AppColors {
   AppColors._();
 
   static const Color textPrimary = Color(0xFF1F242D);
-  static const Color textSecondary = Color(0xFF747B86);
+  static const Color textSecondary = Color(0xFF5F6672);
   static const Color background = Color(0xFFF6F7FB);
   static const Color card = Color(0xFFFFFFFF);
   static const Color cardPacked = Color(0xFFEEF2F6);
@@ -18,15 +18,16 @@ class AppColors {
   static const Color primaryAccent = Color(0xFF53A0FD);
 
   // Done Green (Playful Mint / Emerald)
-  static const Color done = Color(0xFF28B463);
+  static const Color done = Color(0xFF198045);
+  static const Color doneAccent = Color(0xFF28B463);
   static const Color doneLight = Color(0xFFE6F8EE);
 
   // Warning / Remaining Orange
-  static const Color orange = Color(0xFFF39C12);
+  static const Color orange = Color(0xFF9E5E00);
   static const Color orangeLight = Color(0xFFFEF4E5);
 
   // High-Risk Danger Red / Coral
-  static const Color danger = Color(0xFFFF5A5F);
+  static const Color danger = Color(0xFFC8282D);
   static const Color dangerLight = Color(0xFFFFECEC);
 
   // Playful Accents for Dynamic Animations & Character Details
@@ -38,13 +39,13 @@ class AppColors {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2575FC), Color(0xFF439CFB)],
+    colors: [Color(0xFF1F5FD9), Color(0xFF2563EB)],
   );
 
   static const LinearGradient doneGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF28B463), Color(0xFF4CD984)],
+    colors: [Color(0xFF198045), Color(0xFF28B463)],
   );
 }
 
