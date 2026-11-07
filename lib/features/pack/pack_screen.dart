@@ -173,6 +173,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
   }
 
   void _onPointerMove(PointerMoveEvent event, PackItemModel item) {
+    if (!mounted) return;
     if (event.pointer != _activePointerId) return;
     if (_dragStartPointer == null) return;
 
@@ -210,7 +211,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
       // Auto-scroll when dragging near grid edges (Section 11)
       _checkAutoScroll(event.position);
 
-      setState(() {});
+      if (mounted) setState(() {});
     }
   }
 
@@ -262,18 +263,20 @@ class _PackScreenState extends ConsumerState<PackScreen>
     final movedBeyondSlop = _pointerMovedBeyondTapSlop ||
         (_dragStartPointer != null &&
             (event.position - _dragStartPointer!).distance > 8.0);
-    if (_draggingItem != null) {
-      _handleDragEnd(item);
-    } else if (!_longPressFired && !movedBeyondSlop) {
-      // It was a simple tap without moving > 8pt!
-      _handleCardTap(item);
+    if (mounted) {
+      if (_draggingItem != null) {
+        _handleDragEnd(item);
+      } else if (!_longPressFired && !movedBeyondSlop) {
+        // It was a simple tap without moving > 8pt!
+        _handleCardTap(item);
+      }
     }
     _resetDragState();
   }
 
   void _onPointerCancel(PointerCancelEvent event, PackItemModel item) {
     if (event.pointer != _activePointerId) return;
-    if (_draggingItem != null) {
+    if (mounted && _draggingItem != null) {
       _handleFlyBack(_draggingItem!);
     }
     _resetDragState();
@@ -290,10 +293,11 @@ class _PackScreenState extends ConsumerState<PackScreen>
     _tiltAngle = 0.0;
     _isHoveringDropZone = false;
     _draggingItem = null;
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void _handleDragEnd(PackItemModel item) {
+    if (!mounted) return;
     final dropZone = _getBackpackDropZone();
     final droppedInBackpack = _currentPointer != null &&
         (dropZone?.contains(_currentPointer!) ?? false);
@@ -319,6 +323,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     double opacityEnd = 1.0,
     Future<void> Function()? onCompleted,
   }) {
+    if (!mounted) return;
     _flightController?.dispose();
     final controller = AnimationController(vsync: this, duration: duration);
     _flightController = controller;
@@ -338,7 +343,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
       setState(() => _flyingItem = null);
       await onCompleted?.call();
     });
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Size _flightSizeFor(PackItemModel item) =>
@@ -389,7 +394,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
   // --- Click to Pack & Unpack (Section 6.3) ---
 
   void _handleCardTap(PackItemModel item) {
-    if (_flyingItem != null) return;
+    if (!mounted || _flyingItem != null) return;
 
     if (item.isPacked) {
       // Click packed -> Unpack (pop out from backpack, fly back to slot)
@@ -470,6 +475,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
     // 3. Update database
     await sessionRepo.unpackItem(_session!.id, item.listItemId);
+    if (!mounted) return;
 
     // 4. Flight animation: pops out from backpack mouth to slot
     final reducedMotion = ref.read(reducedMotionProvider);

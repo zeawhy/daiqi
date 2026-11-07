@@ -450,5 +450,90 @@ void main() {
       // Remains unpacked
       expect(find.text('0 / 4'), findsOneWidget);
     });
+
+    testWidgets(
+        'Pointer up after PackScreen is disposed during drag does not throw setState-after-dispose',
+        (WidgetTester tester) async {
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
+      tester.view.physicalSize = const Size(400, 850);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(createTestApp());
+      await pumpFrames(tester);
+
+      // 1) Packed card path (matches stack trace: _onPointerUp -> _resetDragState):
+      // Pack '钥匙' first, then press & move > 8pt on packed '钥匙', dispose screen, then pointer-up
+      await tester.tap(find.text('钥匙'));
+      await pumpFrames(tester, total: const Duration(milliseconds: 600));
+      expect(find.text('1 / 4'), findsOneWidget);
+
+      final packedCenter = tester.getCenter(find.text('钥匙'));
+      final packedGesture = await tester.startGesture(packedCenter);
+      await tester.pump();
+      await packedGesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+
+      // Dispose PackScreen before pointer-up
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await packedGesture.up();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // 2) Unpacked card dragging path (_draggingItem != null on pointer-up after dispose):
+      await tester.pumpWidget(createTestApp());
+      await pumpFrames(tester);
+
+      final unpackedCenter = tester.getCenter(find.text('手机'));
+      final dragGesture = await tester.startGesture(unpackedCenter);
+      await tester.pump();
+      await dragGesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+
+      // Dispose PackScreen while dragging, then deliver pointer-move and pointer-up
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await dragGesture.moveBy(const Offset(0, 10));
+      await dragGesture.up();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'Pointer cancel after PackScreen is disposed during drag does not throw setState-after-dispose',
+        (WidgetTester tester) async {
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
+      tester.view.physicalSize = const Size(400, 850);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(createTestApp());
+      await pumpFrames(tester);
+
+      final cardCenter = tester.getCenter(find.text('钱包'));
+      final gesture = await tester.startGesture(cardCenter);
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump();
+
+      // Dispose PackScreen while dragging, then deliver pointer-cancel
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await gesture.cancel();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
   });
 }
