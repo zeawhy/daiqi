@@ -60,6 +60,8 @@ class ChecklistSummaryModel {
   final int packedCount;
   final int highRiskCount;
   final List<String> itemNames;
+  final DateTime? activeSessionStartedAt;
+  final DateTime? lastUsedAt;
 
   const ChecklistSummaryModel({
     required this.id,
@@ -75,7 +77,45 @@ class ChecklistSummaryModel {
     required this.packedCount,
     required this.highRiskCount,
     required this.itemNames,
+    this.activeSessionStartedAt,
+    this.lastUsedAt,
   });
 
   double get progress => totalCount == 0 ? 0.0 : (packedCount / totalCount).clamp(0.0, 1.0);
+
+  // 剩余未装件数
+  int get remainingCount => (totalCount - packedCount).clamp(0, totalCount);
+
+  // 是否存在未完成的进行中会话（12 小时有效期内且尚未全部装完）
+  bool get hasUnfinishedActiveSession =>
+      activeSessionStartedAt != null && totalCount > 0 && packedCount < totalCount;
+
+  /// 计算距离下一次定时提醒的时间间隔（仅当启用提醒且时间/星期有效时返回非空）。
+  Duration? nextReminderDelay(DateTime now) {
+    if (!reminderEnabled || reminderTime == null || reminderWeekdays.isEmpty) {
+      return null;
+    }
+    final parts = reminderTime!.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+
+    for (int dayOffset = 0; dayOffset <= 7; dayOffset++) {
+      final candidate = DateTime(
+        now.year,
+        now.month,
+        now.day + dayOffset,
+        hour,
+        minute,
+      );
+      if (!reminderWeekdays.contains(candidate.weekday)) continue;
+      final diff = candidate.difference(now);
+      // 允许刚到点 15 分钟内的提醒仍视为当前临近提醒
+      if (diff >= const Duration(minutes: -15)) {
+        return diff.isNegative ? Duration.zero : diff;
+      }
+    }
+    return null;
+  }
 }

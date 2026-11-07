@@ -303,6 +303,16 @@ class ChecklistRepository {
     // Check active session for this checklist
     final activeSession = await _getActiveSession(list.id);
 
+    // Check most recent historical session for lastUsedAt
+    final latestSession = await (db.select(db.packSessions)
+          ..where((t) => t.listId.equals(list.id))
+          ..orderBy([(t) => OrderingTerm.desc(t.startedAt)])
+          ..limit(1))
+        .getSingleOrNull();
+    final DateTime? lastUsedAt = latestSession == null
+        ? null
+        : (latestSession.departedAt ?? latestSession.completedAt ?? latestSession.startedAt);
+
     int packedCount = 0;
     int highRiskCount = 0;
 
@@ -346,6 +356,8 @@ class ChecklistRepository {
       packedCount: packedCount,
       highRiskCount: highRiskCount,
       itemNames: items.map((i) => i.name).toList(),
+      activeSessionStartedAt: activeSession?.startedAt,
+      lastUsedAt: lastUsedAt,
     );
   }
 
