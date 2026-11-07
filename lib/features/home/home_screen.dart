@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/models/pack_models.dart';
+import '../../shared/services/haptic_service.dart';
 import '../../shared/widgets/dashed_border.dart';
 import '../../shared/widgets/mini_backpack.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -108,6 +108,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final checklistsAsync = ref.watch(allChecklistsStreamProvider);
+    final reducedMotion =
+        ref.watch(reducedMotionProvider) || MediaQuery.disableAnimationsOf(context);
+    if (reducedMotion) {
+      if (_floatController.isAnimating) {
+        _floatController.stop();
+        _floatController.value = 0.0;
+      }
+    } else if (!_floatController.isAnimating) {
+      _floatController.repeat(reverse: true);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -182,7 +192,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         AnimatedBuilder(
                           animation: _floatController,
                           builder: (context, child) {
-                            final dy = sin(_floatController.value * pi) * 4.0;
+                            final dy = reducedMotion
+                                ? 0.0
+                                : sin(_floatController.value * pi) * 4.0;
                             return Transform.translate(
                               offset: Offset(0, -dy),
                               child: child,
@@ -218,7 +230,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: _buildHeroCard(heroList, now),
+                      child: _buildHeroCard(heroList, now, reducedMotion),
                     ),
                   ),
 
@@ -330,7 +342,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           final item = otherLists[index];
                           return _StaggeredCardWrapper(
                             index: index,
-                            child: _buildChecklistCard(item),
+                            reducedMotion: reducedMotion,
+                            child: _buildChecklistCard(item, reducedMotion),
                           );
                         },
                         childCount: otherLists.length,
@@ -342,7 +355,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                    child: _buildNewChecklistButton(),
+                    child: _buildNewChecklistButton(reducedMotion),
                   ),
                 ),
               ],
@@ -353,7 +366,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildHeroCard(ChecklistSummaryModel hero, DateTime now) {
+  Widget _buildHeroCard(ChecklistSummaryModel hero, DateTime now, bool reducedMotion) {
     final items = hero.itemNames.isNotEmpty
         ? hero.itemNames
         : const ['身份证', '手机', '钥匙', '钱包'];
@@ -375,6 +388,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         : '开始装包';
 
     return _PressableScale(
+      reducedMotion: reducedMotion,
       onTap: () => context.push('/pack/${hero.id}'),
       onLongPress: hero.isPreset ? null : () => _showCardMenu(hero),
       child: Container(
@@ -427,7 +441,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       AnimatedBuilder(
                         animation: _floatController,
                         builder: (context, child) {
-                          final offset = sin(_floatController.value * pi * 2) * 3.0;
+                          final offset = reducedMotion
+                              ? 0.0
+                              : sin(_floatController.value * pi * 2) * 3.0;
                           return Transform.translate(
                             offset: Offset(0, offset),
                             child: child,
@@ -595,7 +611,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildChecklistCard(ChecklistSummaryModel item) {
+  Widget _buildChecklistCard(ChecklistSummaryModel item, bool reducedMotion) {
     final reminderText = item.reminderEnabled && item.reminderTime != null
         ? ' · ⏰ ${item.reminderTime}'
         : '';
@@ -605,6 +621,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: _PressableScale(
+        reducedMotion: reducedMotion,
         onTap: () => context.push('/pack/${item.id}'),
         onLongPress: item.isPreset ? null : () => _showCardMenu(item),
         child: Container(
@@ -801,8 +818,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildNewChecklistButton() {
+  Widget _buildNewChecklistButton(bool reducedMotion) {
     return _PressableScale(
+      reducedMotion: reducedMotion,
       onTap: () => context.push('/editor'),
       child: CustomPaint(
         painter: DashedBorderPainter(
@@ -838,7 +856,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showCardMenu(ChecklistSummaryModel item) {
-    HapticFeedback.mediumImpact();
+    HapticService.mediumImpact();
     showModalBottomSheet(
       context: context,
       builder: (sheetContext) {
@@ -948,11 +966,13 @@ class _PressableScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool reducedMotion;
 
   const _PressableScale({
     required this.child,
     this.onTap,
     this.onLongPress,
+    this.reducedMotion = false,
   });
 
   @override
@@ -969,14 +989,14 @@ class _PressableScaleState extends State<_PressableScale> {
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       onTap: () {
-        HapticFeedback.lightImpact();
+        HapticService.lightImpact();
         widget.onTap?.call();
       },
       onLongPress: widget.onLongPress,
       child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeOutBack,
+        scale: (!widget.reducedMotion && _pressed) ? 0.97 : 1.0,
+        duration: widget.reducedMotion ? Duration.zero : const Duration(milliseconds: 140),
+        curve: widget.reducedMotion ? Curves.linear : Curves.easeOutBack,
         child: widget.child,
       ),
     );
@@ -986,14 +1006,17 @@ class _PressableScaleState extends State<_PressableScale> {
 class _StaggeredCardWrapper extends StatelessWidget {
   final int index;
   final Widget child;
+  final bool reducedMotion;
 
   const _StaggeredCardWrapper({
     required this.index,
     required this.child,
+    this.reducedMotion = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (reducedMotion) return child;
     final durationMs = 260 + (index.clamp(0, 6) * 55);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
