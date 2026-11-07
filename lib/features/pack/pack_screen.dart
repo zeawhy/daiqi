@@ -42,6 +42,10 @@ class _PackScreenState extends ConsumerState<PackScreen>
   // Set when GestureDetector's long press wins for the current pointer, so that
   // the Listener's raw pointer-up is not mistaken for a tap.
   bool _longPressFired = false;
+  // Latched to true as soon as the pointer moves > 8pt from _dragStartPointer,
+  // even for packed items (which return early in _onPointerMove and never set
+  // _draggingItem), preventing scroll gestures from triggering unpack on release.
+  bool _pointerMovedBeyondTapSlop = false;
   Offset? _dragStartPointer;
   Offset? _currentPointer;
   Offset? _cardSlotCenter;
@@ -161,6 +165,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     if (_activePointerId != null) return; // Ignore second finger (Section 11)
     _activePointerId = event.pointer;
     _longPressFired = false;
+    _pointerMovedBeyondTapSlop = false;
     _dragStartPointer = event.position;
     _currentPointer = event.position;
     _cardSlotCenter = _getItemGlobalCenter(item.listItemId);
@@ -170,9 +175,12 @@ class _PackScreenState extends ConsumerState<PackScreen>
   void _onPointerMove(PointerMoveEvent event, PackItemModel item) {
     if (event.pointer != _activePointerId) return;
     if (_dragStartPointer == null) return;
-    if (item.isPacked) return; // Packed items cannot be dragged
 
     final distance = (event.position - _dragStartPointer!).distance;
+    if (distance > 8.0) {
+      _pointerMovedBeyondTapSlop = true;
+    }
+    if (item.isPacked) return; // Packed items cannot be dragged
 
     // Start dragging after moving > 8pt (Section 6.1)
     if (_draggingItem == null && distance > 8.0) {
@@ -251,9 +259,12 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   void _onPointerUp(PointerUpEvent event, PackItemModel item) {
     if (event.pointer != _activePointerId) return;
+    final movedBeyondSlop = _pointerMovedBeyondTapSlop ||
+        (_dragStartPointer != null &&
+            (event.position - _dragStartPointer!).distance > 8.0);
     if (_draggingItem != null) {
       _handleDragEnd(item);
-    } else if (!_longPressFired) {
+    } else if (!_longPressFired && !movedBeyondSlop) {
       // It was a simple tap without moving > 8pt!
       _handleCardTap(item);
     }
@@ -271,6 +282,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
   void _resetDragState() {
     _activePointerId = null;
     _longPressFired = false;
+    _pointerMovedBeyondTapSlop = false;
     _dragStartPointer = null;
     _currentPointer = null;
     _cardSlotCenter = null;
@@ -502,9 +514,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   /// Long press card -> modal menu (Section 6.3)
   void _handleCardLongPress(PackItemModel item) {
-    // Drag has priority: once the card is being dragged, a long press must not
-    // open the menu (the 8pt drag slop is smaller than the 18pt long-press slop).
-    if (_draggingItem != null || _flyingItem != null) return;
+    // Drag has priority: once the card is being dragged (or pointer moved beyond
+    // 8pt tap slop), a long press must not open the menu.
+    if (_draggingItem != null || _flyingItem != null || _pointerMovedBeyondTapSlop) return;
     _longPressFired = true;
     showModalBottomSheet(
       context: context,

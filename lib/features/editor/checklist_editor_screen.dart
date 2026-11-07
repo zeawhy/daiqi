@@ -8,6 +8,8 @@ import '../../shared/constants/emoji_presets.dart';
 import '../../shared/services/notification_service.dart';
 
 class ChecklistEditorScreen extends ConsumerStatefulWidget {
+  static const int maxMnemonicLength = 8;
+
   final String? checklistId; // null if creating new checklist
 
   const ChecklistEditorScreen({super.key, this.checklistId});
@@ -83,7 +85,11 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
 
   void _updateMnemonicIfAuto() {
     if (_mnemonicEnabled && _isAutoMnemonic) {
-      final chars = _items.map((i) => i.name.trim().isNotEmpty ? i.name.trim()[0] : '').join();
+      final chars = _items
+          .map((i) => i.name.trim().isNotEmpty ? i.name.trim().characters.first : '')
+          .where((c) => c.isNotEmpty)
+          .take(ChecklistEditorScreen.maxMnemonicLength)
+          .join();
       _mnemonicController.text = chars;
     }
   }
@@ -436,13 +442,14 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: _mnemonicController,
+                        maxLength: ChecklistEditorScreen.maxMnemonicLength,
                         onChanged: (val) {
                           _isAutoMnemonic = false;
                         },
                         decoration: const InputDecoration(
                           hintText: '如：身手钥钱',
                           border: OutlineInputBorder(),
-                          helperText: '口诀字数必须与物品数量一致才能显示',
+                          helperText: '最多 8 个字，按顺序对应前 N 件物品',
                           helperMaxLines: 2,
                         ),
                       ),

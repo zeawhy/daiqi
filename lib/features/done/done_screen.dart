@@ -142,126 +142,136 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
               if (_isLoading)
                 const Center(child: CircularProgressIndicator())
               else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  child: Column(
-                    children: [
-                      // Top back button
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: _handleBackDeparture,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            child: Text(
-                              '‹ 返回',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxHeight < 520;
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: compact ? 8 : 16,
                       ),
-                      const Spacer(),
-
-                      // Smiling green backpack (Section 5.3 & 6.4)
-                      BackpackWidget(
-                        progress: 1.0,
-                        isDone: true,
-                        reducedMotion: reducedMotion,
-                        width: 200,
-                        height: 240,
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Title: 全部带齐，出门吧！
-                      const Text(
-                        '全部带齐，出门吧！',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Subtitle: N / N 件已装包 (· 连续 X 次零遗漏 🔥 if streak >= 2)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
                         children: [
-                          Text(
-                            '$_packedCount / $_totalCount 件已装包',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          if (_streakCount >= 2) ...[
-                            Text(
-                              ' · 连续 $_streakCount 次零遗漏 🔥',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.done,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const Spacer(),
-
-                      // Departure Button: 出门 🚪 (Green)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.done,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          onPressed: _isDeparting ? null : _handleDepart,
-                          child: const Text(
-                            '出门 🚪',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Bottom link: 还是忘了东西？记一笔
-                      GestureDetector(
-                        onTap: _openRecordForgotSheet,
-                        child: const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text.rich(
-                            TextSpan(
-                              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              children: [
-                                TextSpan(text: '还是忘了东西？'),
-                                TextSpan(
-                                  text: '记一笔',
+                          // Top back button
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: GestureDetector(
+                              onTap: _handleBackDeparture,
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  '‹ 返回',
                                   style: TextStyle(
+                                    fontSize: 16,
                                     color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
-                                    decoration: TextDecoration.underline,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
+                          const Spacer(),
+
+                          // Smiling green backpack (Section 5.3 & 6.4)
+                          BackpackWidget(
+                            progress: 1.0,
+                            isDone: true,
+                            reducedMotion: reducedMotion,
+                            width: compact ? 130 : 200,
+                            height: compact ? 156 : 240,
+                          ),
+                          SizedBox(height: compact ? 12 : 28),
+
+                          // Title: 全部带齐，出门吧！
+                          Text(
+                            '全部带齐，出门吧！',
+                            style: TextStyle(
+                              fontSize: compact ? 24 : 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Subtitle: N / N 件已装包 (· 连续 X 次零遗漏 🔥 if streak >= 2)
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                '$_packedCount / $_totalCount 件已装包',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              if (_streakCount >= 2)
+                                Text(
+                                  '· 连续 $_streakCount 次零遗漏 🔥',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.done,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const Spacer(),
+
+                          // Departure Button: 出门 🚪 (Green)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.done,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              onPressed: _isDeparting ? null : _handleDepart,
+                              child: const Text(
+                                '出门 🚪',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: compact ? 8 : 16),
+
+                          // Bottom link: 还是忘了东西？记一笔
+                          GestureDetector(
+                            onTap: _openRecordForgotSheet,
+                            child: const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Text.rich(
+                                TextSpan(
+                                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                                  children: [
+                                    TextSpan(text: '还是忘了东西？'),
+                                    TextSpan(
+                                      text: '记一笔',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: compact ? 4 : 12),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
+                    );
+                  },
                 ),
 
               // Door closing transition overlay

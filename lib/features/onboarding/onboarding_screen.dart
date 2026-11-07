@@ -141,7 +141,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final reducedMotion = ref.watch(reducedMotionProvider);
+    final reducedMotion =
+        ref.watch(reducedMotionProvider) || MediaQuery.disableAnimationsOf(context);
+    if (reducedMotion) {
+      if (_fingerController.isAnimating) {
+        _fingerController.stop();
+      }
+    } else if (!_isPacked && !_fingerController.isAnimating) {
+      _fingerController.repeat();
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,

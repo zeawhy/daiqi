@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -8,12 +7,52 @@ import 'package:intl/intl.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/models/pack_models.dart';
+import '../../shared/services/haptic_service.dart';
 import '../../shared/widgets/dashed_border.dart';
 import '../../shared/widgets/mini_backpack.dart';
 import '../onboarding/onboarding_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  /// 动态主卡四级优先级选择：
+  /// 1. 未完成的进行中会话 > 2. 提醒时间最近的清单 > 3. 上次用过的清单 > 4. 预设清单回退
+  static ChecklistSummaryModel? selectHeroChecklist(
+    List<ChecklistSummaryModel> checklists,
+    DateTime now,
+  ) {
+    if (checklists.isEmpty) return null;
+
+    // 1. 未完成的进行中会话
+    final unfinished = checklists.where((c) => c.hasUnfinishedActiveSession).toList();
+    if (unfinished.isNotEmpty) {
+      unfinished.sort((a, b) => b.activeSessionStartedAt!.compareTo(a.activeSessionStartedAt!));
+      return unfinished.first;
+    }
+
+    // 2. 提醒时间最近的清单（24 小时内有效提醒）
+    final withReminder = <({ChecklistSummaryModel model, Duration delay})>[];
+    for (final c in checklists) {
+      final delay = c.nextReminderDelay(now);
+      if (delay != null && delay <= const Duration(hours: 24)) {
+        withReminder.add((model: c, delay: delay));
+      }
+    }
+    if (withReminder.isNotEmpty) {
+      withReminder.sort((a, b) => a.delay.compareTo(b.delay));
+      return withReminder.first.model;
+    }
+
+    // 3. 上次用过的清单
+    final used = checklists.where((c) => c.lastUsedAt != null).toList();
+    if (used.isNotEmpty) {
+      used.sort((a, b) => b.lastUsedAt!.compareTo(a.lastUsedAt!));
+      return used.first;
+    }
+
+    // 4. 预设清单回退
+    return checklists.where((c) => c.isPreset).firstOrNull ?? checklists.first;
+  }
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -69,6 +108,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final checklistsAsync = ref.watch(allChecklistsStreamProvider);
+    final reducedMotion =
+        ref.watch(reducedMotionProvider) || MediaQuery.disableAnimationsOf(context);
+    if (reducedMotion) {
+      if (_floatController.isAnimating) {
+        _floatController.stop();
+        _floatController.value = 0.0;
+      }
+    } else if (!_floatController.isAnimating) {
+      _floatController.repeat(reverse: true);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -77,9 +126,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('加载失败: $e')),
           data: (checklists) {
-            // Preset checklist
-            final presetList = checklists.where((c) => c.isPreset).firstOrNull;
-            // Other user checklists
+            final now = DateTime.now();
+            final heroList = HomeScreen.selectHeroChecklist(checklists, now);
+            final otherLists =
+                checklists.where((c) => c.id != heroList?.id).toList();
             final customLists = checklists.where((c) => !c.isPreset).toList();
 
             return CustomScrollView(
@@ -142,7 +192,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         AnimatedBuilder(
                           animation: _floatController,
                           builder: (context, child) {
-                            final dy = sin(_floatController.value * pi) * 4.0;
+                            final dy = reducedMotion
+                                ? 0.0
+                                : sin(_floatController.value * pi) * 4.0;
                             return Transform.translate(
                               offset: Offset(0, -dy),
                               child: child,
@@ -163,7 +215,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               ],
                             ),
                             child: MiniBackpack(
-                              progress: presetList?.progress ?? 0.65,
+                              progress: heroList?.progress ?? 0.0,
                               size: 40,
                             ),
                           ),
@@ -173,12 +225,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
 
-                // 2. Preset Shortcut Card (伸手要钱)
-                if (presetList != null)
+                // 2. Dynamic Hero Shortcut Card
+                if (heroList != null)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: _buildPresetCard(presetList),
+                      child: _buildHeroCard(heroList, now, reducedMotion),
                     ),
                   ),
 
@@ -220,7 +272,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                           ],
                         ),
-                        if (customLists.length > 1)
+                        if (customLists.isNotEmpty)
                           const Row(
                             children: [
                               Icon(
@@ -230,7 +282,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               ),
                               SizedBox(width: 3),
                               Text(
-                                '长按管理',
+                                '点 ⋯ 或长按管理',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
@@ -244,7 +296,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
 
                 // 4. Checklists List
-                if (customLists.isEmpty)
+                if (otherLists.isEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -287,13 +339,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final item = customLists[index];
+                          final item = otherLists[index];
                           return _StaggeredCardWrapper(
                             index: index,
-                            child: _buildChecklistCard(item),
+                            reducedMotion: reducedMotion,
+                            child: _buildChecklistCard(item, reducedMotion),
                           );
                         },
-                        childCount: customLists.length,
+                        childCount: otherLists.length,
                       ),
                     ),
                   ),
@@ -302,7 +355,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                    child: _buildNewChecklistButton(),
+                    child: _buildNewChecklistButton(reducedMotion),
                   ),
                 ),
               ],
@@ -313,13 +366,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildPresetCard(ChecklistSummaryModel preset) {
-    final items = preset.itemNames.isNotEmpty
-        ? preset.itemNames
+  Widget _buildHeroCard(ChecklistSummaryModel hero, DateTime now, bool reducedMotion) {
+    final items = hero.itemNames.isNotEmpty
+        ? hero.itemNames
         : const ['身份证', '手机', '钥匙', '钱包'];
+    final percent = (hero.progress.clamp(0.0, 1.0) * 100).round();
+    final reminderDelay = hero.nextReminderDelay(now);
+    final String statusLabel;
+    if (hero.hasUnfinishedActiveSession) {
+      statusLabel = '进行中 · 已装 $percent%';
+    } else if (reminderDelay != null && reminderDelay <= const Duration(hours: 24)) {
+      statusLabel = '⏰ ${hero.reminderTime} 提醒';
+    } else if (hero.lastUsedAt != null && !hero.isPreset) {
+      statusLabel = '上次使用';
+    } else {
+      statusLabel = '经典口诀';
+    }
+
+    final String ctaText = hero.hasUnfinishedActiveSession
+        ? '继续装包（还差 ${hero.remainingCount} 件）'
+        : '开始装包';
 
     return _PressableScale(
-      onTap: () => context.push('/pack/${preset.id}'),
+      reducedMotion: reducedMotion,
+      onTap: () => context.push('/pack/${hero.id}'),
+      onLongPress: hero.isPreset ? null : () => _showCardMenu(hero),
       child: Container(
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
@@ -361,130 +432,174 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             Padding(
               padding: const EdgeInsets.all(20),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AnimatedBuilder(
-                    animation: _floatController,
-                    builder: (context, child) {
-                      final offset = sin(_floatController.value * pi * 2) * 3.0;
-                      return Transform.translate(
-                        offset: Offset(0, offset),
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          width: 1.5,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedBuilder(
+                        animation: _floatController,
+                        builder: (context, child) {
+                          final offset = reducedMotion
+                              ? 0.0
+                              : sin(_floatController.value * pi * 2) * 3.0;
+                          return Transform.translate(
+                            offset: Offset(0, offset),
+                            child: child,
+                          );
+                        },
+                        child: Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 1.5,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            hero.emoji,
+                            style: const TextStyle(fontSize: 32),
+                          ),
                         ),
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        preset.emoji,
-                        style: const TextStyle(fontSize: 32),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Flexible(
-                              child: Text(
-                                preset.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    hero.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    statusLabel,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                '经典口诀',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: items.take(4).map((name) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: items.take(4).map((name) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                      ),
+                      if (!hero.isPreset) ...[
+                        const SizedBox(width: 4),
+                        Semantics(
+                          button: true,
+                          label: '管理清单 ${hero.name}',
+                          child: GestureDetector(
+                            key: ValueKey('checklist_more_${hero.id}'),
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _showCardMenu(hero),
+                            child: SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Center(
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.more_horiz_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                                 ),
                               ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                    ),
-                    onPressed: () => context.push('/pack/${preset.id}'),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '装包',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
+                            ),
                           ),
                         ),
-                        SizedBox(width: 3),
-                        Icon(Icons.arrow_forward_rounded, size: 16),
                       ],
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () => context.push('/pack/${hero.id}'),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            ctaText,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward_rounded, size: 16),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -496,7 +611,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildChecklistCard(ChecklistSummaryModel item) {
+  Widget _buildChecklistCard(ChecklistSummaryModel item, bool reducedMotion) {
     final reminderText = item.reminderEnabled && item.reminderTime != null
         ? ' · ⏰ ${item.reminderTime}'
         : '';
@@ -506,8 +621,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: _PressableScale(
+        reducedMotion: reducedMotion,
         onTap: () => context.push('/pack/${item.id}'),
-        onLongPress: () => _showCardMenu(item),
+        onLongPress: item.isPreset ? null : () => _showCardMenu(item),
         child: Container(
           padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
@@ -559,12 +675,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         const SizedBox(height: 5),
                         Row(
                           children: [
-                            Text(
-                              '共 ${item.totalCount} 件$reminderText',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textSecondary,
+                            Flexible(
+                              child: Text(
+                                '共 ${item.totalCount} 件$reminderText',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
                             if (percent > 0) ...[
@@ -631,19 +751,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                   const SizedBox(width: 6),
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryBg,
-                      borderRadius: BorderRadius.circular(10),
+                  if (item.isPreset)
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.textSecondary,
+                        size: 18,
+                      ),
+                    )
+                  else
+                    Semantics(
+                      button: true,
+                      label: '管理清单 ${item.name}',
+                      child: GestureDetector(
+                        key: ValueKey('checklist_more_${item.id}'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _showCardMenu(item),
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Center(
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.secondaryBg,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.more_horiz_rounded,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.textSecondary,
-                      size: 18,
-                    ),
-                  ),
                 ],
               ),
               if (item.progress > 0 && item.progress < 1.0) ...[
@@ -667,8 +818,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildNewChecklistButton() {
+  Widget _buildNewChecklistButton(bool reducedMotion) {
     return _PressableScale(
+      reducedMotion: reducedMotion,
       onTap: () => context.push('/editor'),
       child: CustomPaint(
         painter: DashedBorderPainter(
@@ -704,7 +856,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showCardMenu(ChecklistSummaryModel item) {
-    HapticFeedback.mediumImpact();
+    HapticService.mediumImpact();
     showModalBottomSheet(
       context: context,
       builder: (sheetContext) {
@@ -814,11 +966,13 @@ class _PressableScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool reducedMotion;
 
   const _PressableScale({
     required this.child,
     this.onTap,
     this.onLongPress,
+    this.reducedMotion = false,
   });
 
   @override
@@ -835,14 +989,14 @@ class _PressableScaleState extends State<_PressableScale> {
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       onTap: () {
-        HapticFeedback.lightImpact();
+        HapticService.lightImpact();
         widget.onTap?.call();
       },
       onLongPress: widget.onLongPress,
       child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeOutBack,
+        scale: (!widget.reducedMotion && _pressed) ? 0.97 : 1.0,
+        duration: widget.reducedMotion ? Duration.zero : const Duration(milliseconds: 140),
+        curve: widget.reducedMotion ? Curves.linear : Curves.easeOutBack,
         child: widget.child,
       ),
     );
@@ -852,14 +1006,17 @@ class _PressableScaleState extends State<_PressableScale> {
 class _StaggeredCardWrapper extends StatelessWidget {
   final int index;
   final Widget child;
+  final bool reducedMotion;
 
   const _StaggeredCardWrapper({
     required this.index,
     required this.child,
+    this.reducedMotion = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (reducedMotion) return child;
     final durationMs = 260 + (index.clamp(0, 6) * 55);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),

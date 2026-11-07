@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../app/providers.dart';
 import '../../app/theme.dart';
+import '../../shared/services/haptic_service.dart';
 
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const MainScaffold({
@@ -30,8 +32,10 @@ class MainScaffold extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = navigationShell.currentIndex;
+    final reducedMotion =
+        ref.watch(reducedMotionProvider) || MediaQuery.disableAnimationsOf(context);
 
     return Scaffold(
       extendBody: false,
@@ -69,8 +73,9 @@ class MainScaffold extends StatelessWidget {
                   child: _AnimatedNavTab(
                     config: tab,
                     isSelected: isSelected,
+                    reducedMotion: reducedMotion,
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      HapticService.selection();
                       navigationShell.goBranch(
                         index,
                         initialLocation: index == navigationShell.currentIndex,
@@ -103,11 +108,13 @@ class _AnimatedNavTab extends StatelessWidget {
   final _NavTabConfig config;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool reducedMotion;
 
   const _AnimatedNavTab({
     required this.config,
     required this.isSelected,
     required this.onTap,
+    this.reducedMotion = false,
   });
 
   @override
@@ -116,8 +123,8 @@ class _AnimatedNavTab extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutBack,
+        duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 280),
+        curve: reducedMotion ? Curves.linear : Curves.easeOutBack,
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
@@ -129,11 +136,17 @@ class _AnimatedNavTab extends StatelessWidget {
           children: [
             TweenAnimationBuilder<double>(
               key: ValueKey<bool>(isSelected),
-              tween: Tween<double>(begin: isSelected ? 0.75 : 1.0, end: 1.0),
-              duration: const Duration(milliseconds: 360),
-              curve: Curves.elasticOut,
+              tween: Tween<double>(
+                begin: (!reducedMotion && isSelected) ? 0.75 : 1.0,
+                end: 1.0,
+              ),
+              duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 360),
+              curve: reducedMotion ? Curves.linear : Curves.elasticOut,
               builder: (context, scale, child) {
-                return Transform.scale(scale: scale, child: child);
+                return Transform.scale(
+                  scale: reducedMotion ? 1.0 : scale,
+                  child: child,
+                );
               },
               child: Icon(
                 isSelected ? config.selectedIcon : config.icon,
@@ -141,10 +154,8 @@ class _AnimatedNavTab extends StatelessWidget {
                 color: isSelected ? AppColors.primary : AppColors.textSecondary,
               ),
             ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-              child: isSelected
+            if (reducedMotion)
+              isSelected
                   ? Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: Text(
@@ -158,8 +169,27 @@ class _AnimatedNavTab extends StatelessWidget {
                         ),
                       ),
                     )
-                  : const SizedBox.shrink(),
-            ),
+                  : const SizedBox.shrink()
+            else
+              AnimatedSize(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                child: isSelected
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          config.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
           ],
         ),
       ),
