@@ -17,8 +17,8 @@ class MnemonicBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chars = mnemonic.characters.toList();
-    // Only display when character count matches items count
-    if (chars.length != items.length || items.isEmpty) {
+    // Display when character count is valid (up to items.length, e.g. 8-char cap for 10 items)
+    if (chars.isEmpty || items.isEmpty || chars.length > items.length) {
       return const SizedBox.shrink();
     }
 
@@ -37,27 +37,30 @@ class MnemonicBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(chars.length, (index) {
-          final char = chars[index];
-          // Check if item at index is packed
-          final item = items.firstWhere(
-            (i) => i.sortOrder == index,
-            orElse: () => items[index],
-          );
-          final isPacked = item.isPacked;
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(chars.length, (index) {
+            final char = chars[index];
+            // Check if item at index is packed
+            final item = items.firstWhere(
+              (i) => i.sortOrder == index,
+              orElse: () => items[index],
+            );
+            final isPacked = item.isPacked;
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: _MnemonicCharWidget(
-              char: char,
-              isPacked: isPacked,
-              reducedMotion: reducedMotion,
-            ),
-          );
-        }),
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: _MnemonicCharWidget(
+                char: char,
+                isPacked: isPacked,
+                reducedMotion: reducedMotion,
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
