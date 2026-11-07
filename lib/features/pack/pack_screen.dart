@@ -206,28 +206,46 @@ class _PackScreenState extends ConsumerState<PackScreen>
     }
   }
 
+  /// Pure helper for auto-scroll step calculation (exposed for unit/widget tests).
+  /// Returns negative delta when near top edge, positive when near bottom edge, 0 outside.
+  static double computeAutoScrollDelta({
+    required double pointerY,
+    required double gridTop,
+    required double gridBottom,
+    double edgeThreshold = 60.0,
+    double minStep = 2.0,
+    double maxStep = 18.0,
+  }) {
+    if (gridBottom <= gridTop) return 0.0;
+    if (pointerY >= gridTop && pointerY < gridTop + edgeThreshold) {
+      final t = ((gridTop + edgeThreshold - pointerY) / edgeThreshold).clamp(0.0, 1.0);
+      return -(minStep + (maxStep - minStep) * t);
+    }
+    if (pointerY <= gridBottom && pointerY > gridBottom - edgeThreshold) {
+      final t = ((pointerY - (gridBottom - edgeThreshold)) / edgeThreshold).clamp(0.0, 1.0);
+      return minStep + (maxStep - minStep) * t;
+    }
+    return 0.0;
+  }
+
   void _checkAutoScroll(Offset globalPointer) {
     if (!_scrollController.hasClients) return;
     final RenderBox? gridBox = _gridAreaKey.currentContext?.findRenderObject() as RenderBox?;
-    if (gridBox == null) return;
+    if (gridBox == null || !gridBox.hasSize) return;
     final gridPos = gridBox.localToGlobal(Offset.zero);
     final gridHeight = gridBox.size.height;
 
-    const edgeThreshold = 60.0;
-    final pointerY = globalPointer.dy;
+    final delta = computeAutoScrollDelta(
+      pointerY: globalPointer.dy,
+      gridTop: gridPos.dy,
+      gridBottom: gridPos.dy + gridHeight,
+    );
+    if (delta == 0.0) return;
 
-    if (pointerY >= gridPos.dy && pointerY <= gridPos.dy + edgeThreshold) {
-      // Near top edge: scroll up
-      final target = (_scrollController.offset - 15.0).clamp(0.0, _scrollController.position.maxScrollExtent);
-      if (target != _scrollController.offset) {
-        _scrollController.jumpTo(target);
-      }
-    } else if (pointerY <= gridPos.dy + gridHeight && pointerY >= gridPos.dy + gridHeight - edgeThreshold) {
-      // Near bottom edge: scroll down
-      final target = (_scrollController.offset + 15.0).clamp(0.0, _scrollController.position.maxScrollExtent);
-      if (target != _scrollController.offset) {
-        _scrollController.jumpTo(target);
-      }
+    final target = (_scrollController.offset + delta)
+        .clamp(0.0, _scrollController.position.maxScrollExtent);
+    if (target != _scrollController.offset) {
+      _scrollController.jumpTo(target);
     }
   }
 
@@ -680,7 +698,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                   Column(
                     children: [
                       // 1. Top Header (‹ 返回, 编辑, 标题, 副标题)
-                      _buildHeader(remainingCount, isAllPacked, allSkipped, items),
+                      _buildHeader(remainingCount, isAllPacked, allSkipped, items, compactMode: compactMode),
 
                       // Section 11: All skipped banner and "直接出门" button
                       if (allSkipped)
@@ -760,8 +778,8 @@ class _PackScreenState extends ConsumerState<PackScreen>
                               ),
                       ),
 
-                      // 4. Backpack & Progress Area (fixed at bottom, height ~230pt)
-                      _buildBackpackArea(progress, isAllPacked, packedCount, totalCount, reducedMotion),
+                      // 4. Backpack & Progress Area (fixed at bottom, adaptive height)
+                      _buildBackpackArea(progress, isAllPacked, packedCount, totalCount, reducedMotion, availH, items.length),
                     ],
                   ),
 
@@ -840,10 +858,11 @@ class _PackScreenState extends ConsumerState<PackScreen>
     int remainingCount,
     bool isAllPacked,
     bool allSkipped,
-    List<PackItemModel> items,
-  ) {
+    List<PackItemModel> items, {
+    bool compactMode = false,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: compactMode ? 4 : 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -852,9 +871,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
             children: [
               GestureDetector(
                 onTap: () => _handleBackPress(items),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: compactMode ? 4 : 8),
+                  child: const Text(
                     '‹ 返回',
                     style: TextStyle(
                       fontSize: 16,
@@ -866,9 +885,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
               ),
               GestureDetector(
                 onTap: _openEditor,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: compactMode ? 4 : 8),
+                  child: const Text(
                     '编辑',
                     style: TextStyle(
                       fontSize: 16,
@@ -883,8 +902,8 @@ class _PackScreenState extends ConsumerState<PackScreen>
           const SizedBox(height: 4),
           Text(
             _checklist!.name,
-            style: const TextStyle(
-              fontSize: 26,
+            style: TextStyle(
+              fontSize: compactMode ? 20 : 26,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
             ),
@@ -1035,40 +1054,42 @@ class _PackScreenState extends ConsumerState<PackScreen>
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            '先往清单里加点东西',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              '先往清单里加点东西',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: EmojiPresets.commonShortcuts.take(6).map((name) {
-              return ActionChip(
-                label: Text('$name ${EmojiPresets.matchEmoji(name)}'),
-                onPressed: () async {
-                  final checklistRepo = ref.read(checklistRepositoryProvider);
-                  await checklistRepo.createChecklist(
-                    name: _checklist!.name,
-                    emoji: _checklist!.emoji,
-                    items: [(name: name, emoji: EmojiPresets.matchEmoji(name))],
-                  );
-                  _initSession();
-                },
-              );
-            }).toList(),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: EmojiPresets.commonShortcuts.take(6).map((name) {
+                return ActionChip(
+                  label: Text('$name ${EmojiPresets.matchEmoji(name)}'),
+                  onPressed: () async {
+                    final checklistRepo = ref.read(checklistRepositoryProvider);
+                    await checklistRepo.createChecklist(
+                      name: _checklist!.name,
+                      emoji: _checklist!.emoji,
+                      items: [(name: name, emoji: EmojiPresets.matchEmoji(name))],
+                    );
+                    _initSession();
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1079,31 +1100,56 @@ class _PackScreenState extends ConsumerState<PackScreen>
     int packedCount,
     int totalCount,
     bool reducedMotion,
+    double availH,
+    int itemCount,
   ) {
+    final double backpackH;
+    final EdgeInsets padding;
+    final double gap;
+    final double textSize;
+
+    if (availH < 420) {
+      backpackH = (availH * 0.22).clamp(64.0, 96.0);
+      padding = const EdgeInsets.only(top: 2, bottom: 4);
+      gap = 2.0;
+      textSize = 12.0;
+    } else if (itemCount > 6) {
+      backpackH = (availH * 0.22).clamp(140.0, 165.0);
+      padding = const EdgeInsets.only(top: 4, bottom: 8);
+      gap = 4.0;
+      textSize = 15.0;
+    } else {
+      backpackH = (availH * 0.30).clamp(140.0, 220.0);
+      padding = const EdgeInsets.only(top: 8, bottom: 12);
+      gap = 8.0;
+      textSize = 15.0;
+    }
+    final double backpackW = backpackH * 200.0 / 220.0;
+
     return Container(
       key: _backpackAreaKey,
-      padding: const EdgeInsets.only(bottom: 12, top: 8),
+      padding: padding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Backpack Widget (approx 230pt height)
+          // Backpack Widget
           BackpackWidget(
             key: _backpackKey,
             progress: progress,
             isOpen: _isHoveringDropZone,
             isDone: isAllPacked,
             reducedMotion: reducedMotion,
-            width: 200,
-            height: 220,
+            width: backpackW,
+            height: backpackH,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: gap),
           // Progress text / Drop zone hint (Section 6.1)
           Text(
             _isHoveringDropZone
                 ? '松手放进包里'
                 : (isAllPacked ? '全部装好了 🎉' : '$packedCount / $totalCount'),
             style: TextStyle(
-              fontSize: 15,
+              fontSize: textSize,
               fontWeight: FontWeight.bold,
               color: _isHoveringDropZone
                   ? AppColors.primary
