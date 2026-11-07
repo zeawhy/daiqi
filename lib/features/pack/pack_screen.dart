@@ -32,25 +32,35 @@ class _PackScreenState extends ConsumerState<PackScreen>
   PackSession? _session;
   bool _isLoading = true;
 
+  final GlobalKey _overlayKey = GlobalKey();
+
   // Pointer drag state
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _gridAreaKey = GlobalKey();
   PackItemModel? _draggingItem;
   int? _activePointerId;
+  // Set when GestureDetector's long press wins for the current pointer, so that
+  // the Listener's raw pointer-up is not mistaken for a tap.
+  bool _longPressFired = false;
   Offset? _dragStartPointer;
   Offset? _currentPointer;
-  Offset? _cardSlotOffset;
+  Offset? _cardSlotCenter;
   Size? _cardSlotSize;
   double _tiltAngle = 0.0;
   bool _isHoveringDropZone = false;
   final Map<String, GlobalKey> _itemKeys = {};
 
-  // Flight animations (for click pack, click unpack, and drop fly-in/fly-back)
+  // Flight animations
   AnimationController? _flightController;
-  Animation<Offset>? _flightPositionAnimation;
+  Animation<double>? _flightProgress;
+  Offset _flightFromGlobal = Offset.zero;
+  Offset Function() _flightToGlobal = _zeroOffset;
+  Size _flightCardSize = const Size(110, 86);
   Animation<double>? _flightScaleAnimation;
   Animation<double>? _flightOpacityAnimation;
   PackItemModel? _flyingItem;
+
+  static Offset _zeroOffset() => Offset.zero;
 
   @override
   void initState() {
@@ -113,12 +123,12 @@ class _PackScreenState extends ConsumerState<PackScreen>
     );
   }
 
-  /// Slot position of an item in global coordinates
-  Offset? _getItemGlobalPosition(String listItemId) {
-    final key = _itemKeys[listItemId];
-    final renderBox = key?.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null || !renderBox.hasSize) return null;
-    return renderBox.localToGlobal(Offset.zero);
+  /// Center of an item's slot in GLOBAL coordinates (same semantics as the
+  /// backpack mouth and the pointer position: a center point).
+  Offset? _getItemGlobalCenter(String listItemId) {
+    final box = _itemKeys[listItemId]?.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize || !box.attached) return null;
+    return box.localToGlobal(box.size.center(Offset.zero));
   }
 
   Size? _getItemSize(String listItemId) {
@@ -128,15 +138,31 @@ class _PackScreenState extends ConsumerState<PackScreen>
     return renderBox.size;
   }
 
+  /// GLOBAL -> local coordinates of the overlay Stack. Handles status bar,
+  /// display cutout, gesture bar and landscape insets uniformly.
+  Offset _toOverlayLocal(Offset global) {
+    final box = _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return global; // first frame only
+    return box.globalToLocal(global);
+  }
+
+  /// Resolver used as flight target: tracks the slot every frame (scroll /
+  /// re-sort safe) and falls back to the last known center.
+  Offset Function() _slotCenterResolver(String listItemId, Offset fallback) {
+    var last = fallback;
+    return () => last = _getItemGlobalCenter(listItemId) ?? last;
+  }
+
   // --- Pointer Drag Implementation (> 8pt start drag, tilt ±10°) ---
 
   void _onPointerDown(PointerDownEvent event, PackItemModel item) {
     if (item.isSkipped || _flyingItem != null) return;
     if (_activePointerId != null) return; // Ignore second finger (Section 11)
     _activePointerId = event.pointer;
+    _longPressFired = false;
     _dragStartPointer = event.position;
     _currentPointer = event.position;
-    _cardSlotOffset = _getItemGlobalPosition(item.listItemId);
+    _cardSlotCenter = _getItemGlobalCenter(item.listItemId);
     _cardSlotSize = _getItemSize(item.listItemId);
   }
 
@@ -208,7 +234,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     if (event.pointer != _activePointerId) return;
     if (_draggingItem != null) {
       _handleDragEnd(item);
-    } else {
+    } else if (!_longPressFired) {
       // It was a simple tap without moving > 8pt!
       _handleCardTap(item);
     }
@@ -225,9 +251,10 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   void _resetDragState() {
     _activePointerId = null;
+    _longPressFired = false;
     _dragStartPointer = null;
     _currentPointer = null;
-    _cardSlotOffset = null;
+    _cardSlotCenter = null;
     _cardSlotSize = null;
     _tiltAngle = 0.0;
     _isHoveringDropZone = false;
@@ -247,68 +274,85 @@ class _PackScreenState extends ConsumerState<PackScreen>
     }
   }
 
+  void _startFlight({
+    required PackItemModel item,
+    required Offset fromGlobal,
+    required Offset Function() toGlobal,
+    required Size size,
+    required Duration duration,
+    required Curve positionCurve,
+    required double scaleBegin,
+    required double scaleEnd,
+    Curve scaleCurve = Curves.easeIn,
+    double opacityBegin = 1.0,
+    double opacityEnd = 1.0,
+    Future<void> Function()? onCompleted,
+  }) {
+    _flightController?.dispose();
+    final controller = AnimationController(vsync: this, duration: duration);
+    _flightController = controller;
+
+    _flyingItem = item;
+    _flightCardSize = size;
+    _flightFromGlobal = fromGlobal;
+    _flightToGlobal = toGlobal;
+    _flightProgress = CurvedAnimation(parent: controller, curve: positionCurve);
+    _flightScaleAnimation = Tween<double>(begin: scaleBegin, end: scaleEnd)
+        .animate(CurvedAnimation(parent: controller, curve: scaleCurve));
+    _flightOpacityAnimation = Tween<double>(begin: opacityBegin, end: opacityEnd)
+        .animate(CurvedAnimation(parent: controller, curve: Curves.easeIn));
+
+    controller.forward().then((_) async {
+      if (!mounted) return;
+      setState(() => _flyingItem = null);
+      await onCompleted?.call();
+    });
+    setState(() {});
+  }
+
+  Size _flightSizeFor(PackItemModel item) =>
+      _getItemSize(item.listItemId) ?? _cardSlotSize ?? const Size(110, 86);
+
   /// Drop into backpack (Section 6.2)
   void _executeDropIntoBackpack(PackItemModel item, Offset currentPos) {
     final mouthPos = _getBackpackMouthGlobalPosition() ?? currentPos;
     final reducedMotion = ref.read(reducedMotionProvider);
 
-    _flightController?.dispose();
-    _flightController = AnimationController(
-      vsync: this,
+    _startFlight(
+      item: item,
+      fromGlobal: currentPos,
+      toGlobal: () => mouthPos,
+      size: _flightSizeFor(item),
       duration: Duration(milliseconds: reducedMotion ? 150 : 220),
+      positionCurve: Curves.easeIn,
+      scaleBegin: 1.08,
+      scaleEnd: 0.2,
+      scaleCurve: Curves.easeIn,
+      opacityBegin: 1.0,
+      opacityEnd: 0.0,
+      onCompleted: () => _commitPackItem(item),
     );
-
-    _flyingItem = item;
-    _flightPositionAnimation = Tween<Offset>(
-      begin: currentPos,
-      end: mouthPos,
-    ).animate(CurvedAnimation(parent: _flightController!, curve: Curves.easeIn));
-
-    _flightScaleAnimation = Tween<double>(begin: 1.08, end: 0.2).animate(
-      CurvedAnimation(parent: _flightController!, curve: Curves.easeIn),
-    );
-
-    _flightOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _flightController!, curve: Curves.easeIn),
-    );
-
-    _flightController!.forward().then((_) async {
-      _flyingItem = null;
-      setState(() {});
-      await _commitPackItem(item);
-    });
-    setState(() {});
   }
 
   /// Drop outside drop zone -> Spring fly back (Section 6.1)
   void _handleFlyBack(PackItemModel item) {
-    final startPos = _currentPointer ?? Offset.zero;
-    final targetPos = _cardSlotOffset ?? startPos;
+    final from = _currentPointer ?? Offset.zero;
+    final fallback = _cardSlotCenter ?? from;
     final reducedMotion = ref.read(reducedMotionProvider);
 
-    _flightController?.dispose();
-    _flightController = AnimationController(
-      vsync: this,
+    _startFlight(
+      item: item,
+      fromGlobal: from,
+      toGlobal: _slotCenterResolver(item.listItemId, fallback),
+      size: _flightSizeFor(item),
       duration: Duration(milliseconds: reducedMotion ? 150 : 280),
+      positionCurve: Curves.easeOutBack,
+      scaleBegin: 1.08,
+      scaleEnd: 1.0,
+      scaleCurve: Curves.easeOut,
+      opacityBegin: 1.0,
+      opacityEnd: 1.0,
     );
-
-    _flyingItem = item;
-    _flightPositionAnimation = Tween<Offset>(
-      begin: startPos,
-      end: targetPos,
-    ).animate(CurvedAnimation(parent: _flightController!, curve: Curves.easeOutBack));
-
-    _flightScaleAnimation = Tween<double>(begin: 1.08, end: 1.0).animate(
-      CurvedAnimation(parent: _flightController!, curve: Curves.easeOut),
-    );
-
-    _flightOpacityAnimation = const AlwaysStoppedAnimation(1.0);
-
-    _flightController!.forward().then((_) {
-      _flyingItem = null;
-      setState(() {});
-    });
-    setState(() {});
   }
 
   // --- Click to Pack & Unpack (Section 6.3) ---
@@ -327,7 +371,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   /// Click unpacked card flies into backpack (Section 6.3)
   void _executeClickPack(PackItemModel item) {
-    final slotPos = _getItemGlobalPosition(item.listItemId);
+    final slotPos = _getItemGlobalCenter(item.listItemId);
     final mouthPos = _getBackpackMouthGlobalPosition();
     if (slotPos == null || mouthPos == null) {
       _commitPackItem(item);
@@ -335,32 +379,20 @@ class _PackScreenState extends ConsumerState<PackScreen>
     }
 
     final reducedMotion = ref.read(reducedMotionProvider);
-    _flightController?.dispose();
-    _flightController = AnimationController(
-      vsync: this,
+    _startFlight(
+      item: item,
+      fromGlobal: slotPos,
+      toGlobal: () => mouthPos,
+      size: _flightSizeFor(item),
       duration: Duration(milliseconds: reducedMotion ? 150 : 400),
+      positionCurve: Curves.easeInOut,
+      scaleBegin: 1.0,
+      scaleEnd: 0.2,
+      scaleCurve: Curves.easeIn,
+      opacityBegin: 1.0,
+      opacityEnd: 0.0,
+      onCompleted: () => _commitPackItem(item),
     );
-
-    _flyingItem = item;
-    _flightPositionAnimation = Tween<Offset>(
-      begin: slotPos,
-      end: mouthPos,
-    ).animate(CurvedAnimation(parent: _flightController!, curve: Curves.easeInOut));
-
-    _flightScaleAnimation = Tween<double>(begin: 1.0, end: 0.2).animate(
-      CurvedAnimation(parent: _flightController!, curve: Curves.easeIn),
-    );
-
-    _flightOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _flightController!, curve: Curves.easeIn),
-    );
-
-    _flightController!.forward().then((_) async {
-      _flyingItem = null;
-      setState(() {});
-      await _commitPackItem(item);
-    });
-    setState(() {});
   }
 
   /// Commit pack item to database & trigger backpack effects (Section 6.2)
@@ -396,47 +428,33 @@ class _PackScreenState extends ConsumerState<PackScreen>
     if (_session == null) return;
     final sessionRepo = ref.read(packSessionRepositoryProvider);
 
-    final slotPos = _getItemGlobalPosition(item.listItemId);
-    final mouthPos = _getBackpackMouthGlobalPosition();
-
     // 1. Light haptic
     HapticService.lightImpact();
 
     // 2. Play unpack sound
     AudioService.playUnpack();
 
+    final mouthPos = _getBackpackMouthGlobalPosition() ?? Offset.zero;
+    final size = _flightSizeFor(item);
+
     // 3. Update database
     await sessionRepo.unpackItem(_session!.id, item.listItemId);
 
     // 4. Flight animation: pops out from backpack mouth to slot
-    if (slotPos != null && mouthPos != null) {
-      final reducedMotion = ref.read(reducedMotionProvider);
-      _flightController?.dispose();
-      _flightController = AnimationController(
-        vsync: this,
-        duration: Duration(milliseconds: reducedMotion ? 150 : 320),
-      );
-
-      _flyingItem = item;
-      _flightPositionAnimation = Tween<Offset>(
-        begin: mouthPos,
-        end: slotPos,
-      ).animate(CurvedAnimation(parent: _flightController!, curve: Curves.easeOutBack));
-
-      _flightScaleAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
-        CurvedAnimation(parent: _flightController!, curve: Curves.easeOut),
-      );
-
-      _flightOpacityAnimation = Tween<double>(begin: 0.2, end: 1.0).animate(
-        CurvedAnimation(parent: _flightController!, curve: Curves.easeIn),
-      );
-
-      _flightController!.forward().then((_) {
-        _flyingItem = null;
-        setState(() {});
-      });
-      setState(() {});
-    }
+    final reducedMotion = ref.read(reducedMotionProvider);
+    _startFlight(
+      item: item,
+      fromGlobal: mouthPos,
+      toGlobal: _slotCenterResolver(item.listItemId, mouthPos),
+      size: size,
+      duration: Duration(milliseconds: reducedMotion ? 150 : 320),
+      positionCurve: Curves.easeOutBack,
+      scaleBegin: 0.4,
+      scaleEnd: 1.0,
+      scaleCurve: Curves.easeOut,
+      opacityBegin: 0.2,
+      opacityEnd: 1.0,
+    );
   }
 
   /// Section 6.4: All packed celebration
@@ -465,6 +483,10 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
   /// Long press card -> modal menu (Section 6.3)
   void _handleCardLongPress(PackItemModel item) {
+    // Drag has priority: once the card is being dragged, a long press must not
+    // open the menu (the 8pt drag slop is smaller than the 18pt long-press slop).
+    if (_draggingItem != null || _flyingItem != null) return;
+    _longPressFired = true;
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -646,6 +668,8 @@ class _PackScreenState extends ConsumerState<PackScreen>
             backgroundColor: AppColors.background,
             body: SafeArea(
               child: Stack(
+                key: _overlayKey,
+                clipBehavior: Clip.none,
                 children: [
                   Column(
                     children: [
@@ -725,52 +749,54 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
                   // Floating dragged card (Section 6.1)
                   if (_draggingItem != null && _currentPointer != null)
-                    Positioned(
-                      left: _currentPointer!.dx - (_cardSlotSize?.width ?? 100) / 2,
-                      top: _currentPointer!.dy - (_cardSlotSize?.height ?? 86) / 2,
-                      width: _cardSlotSize?.width ?? 110,
-                      height: _cardSlotSize?.height ?? 86,
-                      child: IgnorePointer(
-                        child: Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.diagonal3Values(
-                            reducedMotion ? 1.0 : 1.08,
-                            reducedMotion ? 1.0 : 1.08,
-                            1.0,
-                          )..rotateZ(reducedMotion ? 0.0 : _tiltAngle),
-                          child: ItemCardWidget(
-                            item: _draggingItem!,
-                            isDragged: true,
+                    Builder(builder: (_) {
+                      final size = _cardSlotSize ?? const Size(110, 86);
+                      final c = _toOverlayLocal(_currentPointer!);
+                      return Positioned(
+                        left: c.dx - size.width / 2,
+                        top: c.dy - size.height / 2,
+                        width: size.width,
+                        height: size.height,
+                        child: IgnorePointer(
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.diagonal3Values(
+                              reducedMotion ? 1.0 : 1.08,
+                              reducedMotion ? 1.0 : 1.08,
+                              1.0,
+                            )..rotateZ(reducedMotion ? 0.0 : _tiltAngle),
+                            child: ItemCardWidget(
+                              item: _draggingItem!,
+                              isDragged: true,
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
 
-                  // Flying card during animation (Click pack, Drop in, Unpack)
+                  // Flying card during animation (Click pack, Drop in, Fly back, Unpack)
                   if (_flyingItem != null &&
-                      _flightPositionAnimation != null &&
+                      _flightProgress != null &&
                       _flightScaleAnimation != null &&
                       _flightOpacityAnimation != null)
                     AnimatedBuilder(
                       animation: _flightController!,
-                      builder: (context, child) {
-                        final pos = _flightPositionAnimation!.value;
-                        final scale = _flightScaleAnimation!.value;
-                        final opacity = _flightOpacityAnimation!.value;
-
-                        final cardWidth = _cardSlotSize?.width ?? 110;
-                        final cardHeight = _cardSlotSize?.height ?? 86;
+                      builder: (context, _) {
+                        // Offset.lerp extrapolates for t > 1, so easeOutBack overshoot still works.
+                        final g = Offset.lerp(_flightFromGlobal, _flightToGlobal(), _flightProgress!.value)!;
+                        final c = _toOverlayLocal(g);
+                        final size = _flightCardSize;
 
                         return Positioned(
-                          left: pos.dx - cardWidth / 2,
-                          top: pos.dy - cardHeight / 2,
-                          width: cardWidth,
-                          height: cardHeight,
+                          left: c.dx - size.width / 2,
+                          top: c.dy - size.height / 2,
+                          width: size.width,
+                          height: size.height,
                           child: IgnorePointer(
                             child: Transform.scale(
-                              scale: scale,
+                              scale: _flightScaleAnimation!.value,
                               child: Opacity(
-                                opacity: opacity.clamp(0.0, 1.0),
+                                opacity: _flightOpacityAnimation!.value.clamp(0.0, 1.0),
                                 child: ItemCardWidget(
                                   item: _flyingItem!,
                                   isDragged: true,
@@ -893,7 +919,8 @@ class _PackScreenState extends ConsumerState<PackScreen>
                 spacing: spacing,
                 runSpacing: spacing,
                 children: items.map((item) {
-                  final isCurrentlyDragged = _draggingItem?.listItemId == item.listItemId;
+                  final isHiddenSlot = _draggingItem?.listItemId == item.listItemId ||
+                      _flyingItem?.listItemId == item.listItemId;
                   final itemKey = _itemKeys.putIfAbsent(item.listItemId, () => GlobalKey());
 
                   return SizedBox(
@@ -909,7 +936,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                         onLongPress: () => _handleCardLongPress(item),
                         child: ItemCardWidget(
                           item: item,
-                          isPlaceholder: isCurrentlyDragged,
+                          isPlaceholder: isHiddenSlot,
                         ),
                       ),
                     ),
