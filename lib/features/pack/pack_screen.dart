@@ -49,6 +49,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
   double _tiltAngle = 0.0;
   bool _isHoveringDropZone = false;
   final Map<String, GlobalKey> _itemKeys = {};
+  bool _highRiskBannerExpanded = false;
 
   // Flight animations
   AnimationController? _flightController;
@@ -667,9 +668,14 @@ class _PackScreenState extends ConsumerState<PackScreen>
           child: Scaffold(
             backgroundColor: AppColors.background,
             body: SafeArea(
-              child: Stack(
-                key: _overlayKey,
-                clipBehavior: Clip.none,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final availH = constraints.maxHeight;
+                  final compactMode = availH < 420;
+
+                  return Stack(
+                    key: _overlayKey,
+                    clipBehavior: Clip.none,
                 children: [
                   Column(
                     children: [
@@ -728,18 +734,30 @@ class _PackScreenState extends ConsumerState<PackScreen>
                         ),
 
                       // 2. Mnemonic Bar (if present and character count matches items count)
-                      if (_checklist!.mnemonic != null && _checklist!.mnemonic!.isNotEmpty)
+                      if (!compactMode && _checklist!.mnemonic != null && _checklist!.mnemonic!.isNotEmpty)
                         MnemonicBar(
                           mnemonic: _checklist!.mnemonic!,
                           items: items,
                           reducedMotion: reducedMotion,
                         ),
 
+                      // High-Risk Banner (placed below Header / MnemonicBar, above Grid)
+                      if (!compactMode && unpackedHighRisk.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                          child: _buildHighRiskBanner(unpackedHighRisk),
+                        ),
+
                       // 3. Grid of Cards + High-Risk Banner or Empty State
                       Expanded(
                         child: items.isEmpty
                             ? _buildEmptyState()
-                            : _buildItemsList(items, unpackedHighRisk),
+                            : _buildItemsList(
+                                items,
+                                unpackedHighRisk,
+                                compactMode: compactMode,
+                                reducedMotion: reducedMotion,
+                              ),
                       ),
 
                       // 4. Backpack & Progress Area (fixed at bottom, height ~230pt)
@@ -808,10 +826,12 @@ class _PackScreenState extends ConsumerState<PackScreen>
                       },
                     ),
                 ],
-              ),
-            ),
+              );
+            },
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }
@@ -901,7 +921,61 @@ class _PackScreenState extends ConsumerState<PackScreen>
     );
   }
 
-  Widget _buildItemsList(List<PackItemModel> items, List<PackItemModel> unpackedHighRisk) {
+  Widget _buildHighRiskBanner(List<PackItemModel> unpackedHighRisk) {
+    final canCollapse = unpackedHighRisk.length > 2;
+    final isExpanded = canCollapse && _highRiskBannerExpanded;
+    final String text = (!canCollapse || isExpanded)
+        ? '🔴 ${unpackedHighRisk.map((e) => e.name).join('、')} 你以前忘过，先装它们'
+        : '🔴 ${unpackedHighRisk.take(2).map((e) => e.name).join('、')} 等 ${unpackedHighRisk.length} 件你以前忘过，先装它们';
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canCollapse
+          ? () => setState(() => _highRiskBannerExpanded = !_highRiskBannerExpanded)
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.dangerLight,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                text,
+                maxLines: isExpanded ? null : 1,
+                overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (canCollapse) ...[
+              const SizedBox(width: 4),
+              Icon(
+                isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                size: 18,
+                color: AppColors.danger,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemsList(
+    List<PackItemModel> items,
+    List<PackItemModel> unpackedHighRisk, {
+    bool compactMode = false,
+    bool reducedMotion = false,
+  }) {
+    final hasMnemonic = _checklist?.mnemonic != null && _checklist!.mnemonic!.isNotEmpty;
+
     return SingleChildScrollView(
       key: _gridAreaKey,
       controller: _scrollController,
@@ -909,6 +983,16 @@ class _PackScreenState extends ConsumerState<PackScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
+          if (compactMode && unpackedHighRisk.isNotEmpty) ...[
+            _buildHighRiskBanner(unpackedHighRisk),
+            const SizedBox(height: 8),
+          ],
+          if (compactMode && hasMnemonic)
+            MnemonicBar(
+              mnemonic: _checklist!.mnemonic!,
+              items: items,
+              reducedMotion: reducedMotion,
+            ),
           // 3-columns Grid of item cards (Section 5.2)
           LayoutBuilder(
             builder: (context, constraints) {
@@ -945,33 +1029,6 @@ class _PackScreenState extends ConsumerState<PackScreen>
               );
             },
           ),
-
-          // High-Risk Banner (Section 5.2: 🔴 身份证、充电器 你以前忘过，先装它们)
-          if (unpackedHighRisk.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.dangerLight,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '🔴 ${unpackedHighRisk.map((e) => e.name).join('、')} 你以前忘过，先装它们',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.danger,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
