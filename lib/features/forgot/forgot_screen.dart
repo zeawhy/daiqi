@@ -115,7 +115,8 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                     '遗忘记录',
                                     style: TextStyle(
                                       fontSize: 26,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.5,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
@@ -124,6 +125,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                     '忘过的东西会被标成高危，下次排在最前面',
                                     style: TextStyle(
                                       fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
@@ -132,18 +134,16 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                             ),
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.danger,
+                                backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               ),
                               onPressed: _openRecordSheet,
                               icon: const Icon(Icons.edit_note, size: 20),
                               label: const Text(
                                 '记一笔',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
@@ -155,15 +155,20 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: const BorderSide(color: AppColors.border),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color.fromRGBO(28, 25, 23, 0.05),
+                                blurRadius: 24,
+                                offset: Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          elevation: 0,
-                          color: AppColors.card,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
                             child: Row(
                               children: [
                                 _buildStatItem('出门次数', '$_departedCount', AppColors.textPrimary),
@@ -194,7 +199,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                   '还没有忘过东西，继续保持 👍',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                     color: AppColors.textPrimary,
                                   ),
                                 ),
@@ -221,8 +226,8 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                             child: const Text(
                               '最常忘的东西',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
                               ),
                             ),
@@ -231,15 +236,20 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Card(
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: const BorderSide(color: AppColors.border),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.card,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color.fromRGBO(28, 25, 23, 0.05),
+                                    blurRadius: 24,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
                               ),
-                              color: AppColors.card,
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
                                 child: Column(
                                   children: [
                                     for (int i = 0; i < _ranking.length; i++)
@@ -259,8 +269,8 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                           child: const Text(
                             '最近记录',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
                           ),
@@ -272,9 +282,11 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                             final item = _timeline[index];
                             final listName = item.listName ?? '未关联清单';
                             final timeStr = _formatRecordTime(item.record.createdAt);
+                            final pastelColor =
+                                AppColors.pastelPills[index % AppColors.pastelPills.length];
 
                             return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
                               child: Dismissible(
                                 key: Key(item.record.id),
                                 direction: DismissDirection.endToStart,
@@ -283,7 +295,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                   padding: const EdgeInsets.only(right: 20),
                                   decoration: BoxDecoration(
                                     color: AppColors.danger,
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: const Icon(Icons.delete, color: Colors.white),
                                 ),
@@ -292,14 +304,29 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   decoration: BoxDecoration(
                                     color: AppColors.card,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: AppColors.border),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color.fromRGBO(28, 25, 23, 0.04),
+                                        blurRadius: 16,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
                                   ),
                                   child: Row(
                                     children: [
-                                      Text(
-                                        item.itemEmoji,
-                                        style: const TextStyle(fontSize: 24),
+                                      Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          color: pastelColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          item.itemEmoji,
+                                          style: const TextStyle(fontSize: 22),
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -319,6 +346,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                               '$timeStr · $listName',
                                               style: const TextStyle(
                                                 fontSize: 12,
+                                                fontWeight: FontWeight.w500,
                                                 color: AppColors.textSecondary,
                                               ),
                                             ),

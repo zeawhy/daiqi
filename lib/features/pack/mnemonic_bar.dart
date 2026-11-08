@@ -26,14 +26,14 @@ class MnemonicBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border, width: 1.2),
-        boxShadow: [
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border, width: 0.6),
+        boxShadow: const [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Color.fromRGBO(28, 25, 23, 0.05),
+            blurRadius: 20,
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -55,6 +55,7 @@ class MnemonicBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 5),
               child: _MnemonicCharWidget(
                 char: char,
+                index: index,
                 isPacked: isPacked,
                 reducedMotion: reducedMotion,
               ),
@@ -68,11 +69,13 @@ class MnemonicBar extends StatelessWidget {
 
 class _MnemonicCharWidget extends StatefulWidget {
   final String char;
+  final int index;
   final bool isPacked;
   final bool reducedMotion;
 
   const _MnemonicCharWidget({
     required this.char,
+    required this.index,
     required this.isPacked,
     required this.reducedMotion,
   });
@@ -116,6 +119,9 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
 
   @override
   Widget build(BuildContext context) {
+    final pastelBg =
+        AppColors.pastelPills[widget.index % AppColors.pastelPills.length];
+
     return AnimatedBuilder(
       animation: _scaleAnimation,
       builder: (context, child) {
@@ -127,14 +133,13 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              gradient: widget.isPacked ? AppColors.primaryGradient : null,
-              color: widget.isPacked ? null : AppColors.secondaryBg,
-              borderRadius: BorderRadius.circular(12),
+              color: widget.isPacked ? AppColors.primary : pastelBg,
+              borderRadius: BorderRadius.circular(16),
               boxShadow: widget.isPacked
                   ? [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.28),
-                        blurRadius: 8,
+                        color: AppColors.textPrimary.withValues(alpha: 0.16),
+                        blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
                     ]
@@ -144,11 +149,11 @@ class _MnemonicCharWidgetState extends State<_MnemonicCharWidget>
             child: Text(
               widget.char,
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
                 color: widget.isPacked
                     ? Colors.white
-                    : AppColors.textSecondary,
+                    : AppColors.textPrimary,
               ),
             ),
           ),

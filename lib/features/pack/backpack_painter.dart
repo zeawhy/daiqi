@@ -36,10 +36,10 @@ class BackpackPainter extends CustomPainter {
     final double bodyHeight = bodyBottom - bodyTop;
     final double cornerRadius = width * 0.18;
 
-    // Interpolated colors
+    // Interpolated colors (Charcoal / Warm Stone -> Forest Green)
     final Color strokeColor = Color.lerp(
       AppColors.primary,
-      AppColors.doneAccent,
+      AppColors.done,
       doneTransition,
     )!;
 
@@ -50,25 +50,25 @@ class BackpackPainter extends CustomPainter {
     )!;
 
     final Color waterColor = Color.lerp(
-      AppColors.primary.withValues(alpha: 0.88),
-      AppColors.doneAccent.withValues(alpha: 0.88),
+      AppColors.primary.withValues(alpha: 0.85),
+      AppColors.done.withValues(alpha: 0.88),
       doneTransition,
     )!;
 
     final Color backWaveColor = Color.lerp(
-      AppColors.primary.withValues(alpha: 0.42),
+      AppColors.backpackHardware.withValues(alpha: 0.35),
       AppColors.doneAccent.withValues(alpha: 0.42),
       doneTransition,
     )!;
 
-    // 1. Draw Aura Glow if hovered, dragged over, or done
+    // 1. Draw Soft Diffused Glow if hovered, dragged over, or done
     if (showGlow || isOpen || doneTransition > 0.2) {
       final Color glowColor = doneTransition > 0.2
-          ? AppColors.doneAccent.withValues(alpha: 0.28 * doneTransition)
-          : AppColors.primary.withValues(alpha: 0.26);
+          ? AppColors.done.withValues(alpha: 0.18 * doneTransition)
+          : AppColors.textPrimary.withValues(alpha: 0.10);
       final Paint glowPaint = Paint()
         ..color = glowColor
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
       final glowRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(4, bodyTop + 4, width - 8, bodyHeight - 8),
         Radius.circular(cornerRadius + 4),
@@ -270,114 +270,41 @@ class BackpackPainter extends CustomPainter {
       ..close();
     canvas.drawPath(pullTabPath, sliderPaint);
 
-    // 6. Draw Smile Face (笑脸) when done
+    // 6. Draw Minimalist Completion Check Badge when done
     if (smileOpacity > 0.0) {
-      final faceColor = Colors.white.withValues(alpha: smileOpacity);
-      final facePaint = Paint()
-        ..color = faceColor
+      final Offset badgeCenter = Offset(width / 2, bodyTop + bodyHeight * 0.56);
+      final double badgeRadius = max(8.0, width * 0.14);
+
+      final Paint badgeBgPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.22 * smileOpacity)
         ..style = PaintingStyle.fill;
+      canvas.drawCircle(badgeCenter, badgeRadius, badgeBgPaint);
 
-      final double faceCenterY = bodyTop + bodyHeight * 0.58;
-      final double eyeDistance = width * 0.15;
-      final double eyeRadius = max(3.5, width * 0.035);
-
-      if (width >= 80) {
-        // Happy curved eyes (^ ^) on full-size backpack
-        final Paint happyEyePaint = Paint()
-          ..color = faceColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = max(3.0, width * 0.03)
-          ..strokeCap = StrokeCap.round;
-        final double happyEyeRadius = max(5.5, width * 0.035);
-        canvas.drawArc(
-          Rect.fromCircle(
-              center: Offset(width / 2 - eyeDistance, faceCenterY - 2),
-              radius: happyEyeRadius),
-          pi * 1.1,
-          pi * 0.8,
-          false,
-          happyEyePaint,
-        );
-        canvas.drawArc(
-          Rect.fromCircle(
-              center: Offset(width / 2 + eyeDistance, faceCenterY - 2),
-              radius: happyEyeRadius),
-          pi * 1.1,
-          pi * 0.8,
-          false,
-          happyEyePaint,
-        );
-
-        // Rosy cheeks
-        final Paint cheekPaint = Paint()
-          ..color = AppColors.cheekPink.withValues(alpha: 0.65 * smileOpacity)
-          ..style = PaintingStyle.fill;
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: Offset(width * 0.31, faceCenterY - 1),
-            width: 11,
-            height: 6.5,
-          ),
-          cheekPaint,
-        );
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: Offset(width * 0.69, faceCenterY - 1),
-            width: 11,
-            height: 6.5,
-          ),
-          cheekPaint,
-        );
-      } else {
-        // Left eye & right eye
-        canvas.drawCircle(Offset(width / 2 - eyeDistance, faceCenterY - 4), eyeRadius, facePaint);
-        canvas.drawCircle(Offset(width / 2 + eyeDistance, faceCenterY - 4), eyeRadius, facePaint);
-      }
-
-      // Smile mouth arc
-      final mouthPaint = Paint()
-        ..color = faceColor
+      final Paint badgeRingPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.55 * smileOpacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(3.0, width * 0.03)
-        ..strokeCap = StrokeCap.round;
+        ..strokeWidth = max(1.2, width * 0.012);
+      canvas.drawCircle(badgeCenter, badgeRadius, badgeRingPaint);
 
-      final mouthRect = Rect.fromCenter(
-        center: Offset(width / 2, faceCenterY + 4),
-        width: width * 0.24,
-        height: height * 0.12,
-      );
-      canvas.drawArc(mouthRect, 0.2 * pi, 0.6 * pi, false, mouthPaint);
-    } else if (isOpen && width >= 80) {
-      // Expectant "Feed Me!" expression when dragging item over backpack
-      final double faceCenterY = bodyTop + bodyHeight * 0.58;
-      final Color exprColor = progress.clamp(0.0, 1.0) > 0.55
-          ? Colors.white.withValues(alpha: 0.9)
-          : strokeColor.withValues(alpha: 0.75);
-      final Paint eyePaint = Paint()
-        ..color = exprColor
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(width * 0.39, faceCenterY - 4), 4.2, eyePaint);
-      canvas.drawCircle(Offset(width * 0.61, faceCenterY - 4), 4.2, eyePaint);
+      final Path checkPath = Path()
+        ..moveTo(badgeCenter.dx - badgeRadius * 0.38, badgeCenter.dy + badgeRadius * 0.02)
+        ..lineTo(badgeCenter.dx - badgeRadius * 0.08, badgeCenter.dy + badgeRadius * 0.32)
+        ..lineTo(badgeCenter.dx + badgeRadius * 0.42, badgeCenter.dy - badgeRadius * 0.26);
 
-      // Cute surprised "O" mouth
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(width / 2, faceCenterY + 6),
-          width: 11,
-          height: 13,
-        ),
-        Paint()
-          ..color = exprColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.6,
-      );
+      final Paint checkPaint = Paint()
+        ..color = Colors.white.withValues(alpha: smileOpacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.0, width * 0.026)
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(checkPath, checkPaint);
     }
 
-    // 7. Draw Body Stroke (4pt)
+    // 7. Draw Body Stroke
     final strokePaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = max(2.5, width * 0.036);
+      ..strokeWidth = max(2.0, width * 0.028);
     canvas.drawPath(bodyPath, strokePaint);
   }
 

@@ -213,7 +213,8 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
             child: FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
               onPressed: _saveChecklist,
               child: const Text('保存'),
@@ -236,9 +237,16 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: AppColors.secondaryBg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.border, width: 0.6),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color.fromRGBO(28, 25, 23, 0.05),
+                          blurRadius: 16,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
                     alignment: Alignment.center,
                     child: Text(_selectedEmoji, style: const TextStyle(fontSize: 26)),
@@ -253,15 +261,15 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       hintText: '清单名称（最多12字）',
                       counterText: '',
                       filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      fillColor: AppColors.card,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
                       ),
                     ),
                   ),
@@ -274,7 +282,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
             // 2. Add Item Input
             const Text(
               '添加物品',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
             Row(
@@ -285,15 +293,15 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                     decoration: InputDecoration(
                       hintText: '输入物品名称，按回车添加',
                       filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      fillColor: AppColors.card,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
                       ),
                     ),
                     onSubmitted: (val) => _addItem(val),
@@ -304,7 +312,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                   icon: const Icon(Icons.add),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                   onPressed: () => _addItem(_itemInputController.text),
                 ),
@@ -316,7 +324,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
               const SizedBox(height: 12),
               const Text(
                 '常用物品快捷标签',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -327,9 +335,9 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                   return ActionChip(
                     avatar: Text(emoji, style: const TextStyle(fontSize: 14)),
                     label: Text(name),
-                    backgroundColor: Colors.white,
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    backgroundColor: AppColors.card,
+                    side: const BorderSide(color: AppColors.border, width: 0.6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     onPressed: () => _addItem(name),
                   );
                 }).toList(),
@@ -344,11 +352,11 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
               children: [
                 Text(
                   '物品列表 (${_items.length})',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                 ),
                 const Text(
                   '长按拖动排序',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -359,9 +367,15 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color.fromRGBO(28, 25, 23, 0.04),
+                      blurRadius: 18,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
                 ),
                 alignment: Alignment.center,
                 child: const Text('清单还没有物品，在上方添加', style: TextStyle(color: AppColors.textSecondary)),
@@ -383,7 +397,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       padding: const EdgeInsets.only(right: 16),
                       decoration: BoxDecoration(
                         color: AppColors.danger,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Icon(Icons.delete, color: Colors.white),
                     ),
@@ -391,9 +405,22 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                     child: Card(
                       key: ValueKey('card_${item.name}_$index'),
                       margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: const BorderSide(color: AppColors.border, width: 0.5),
+                      ),
                       child: ListTile(
-                        leading: Text(item.emoji, style: const TextStyle(fontSize: 22)),
-                        title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.pastelPills[index % AppColors.pastelPills.length],
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(item.emoji, style: const TextStyle(fontSize: 18)),
+                        ),
+                        title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -414,8 +441,12 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
 
             // 5. Mnemonic (口诀) Switch & Field
             Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(color: AppColors.border, width: 0.5),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -424,7 +455,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       children: [
                         const Text(
                           '口诀条',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                         ),
                         Switch(
                           value: _mnemonicEnabled,
@@ -446,9 +477,11 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         onChanged: (val) {
                           _isAutoMnemonic = false;
                         },
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: '如：身手钥钱',
-                          border: OutlineInputBorder(),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
                           helperText: '最多 8 个字，按顺序对应前 N 件物品',
                           helperMaxLines: 2,
                         ),
@@ -463,8 +496,12 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
 
             // 6. Reminder Switch & Settings
             Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(color: AppColors.border, width: 0.5),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -473,7 +510,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       children: [
                         const Text(
                           '定时提醒',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                         ),
                         Switch(
                           value: _reminderEnabled,
@@ -495,7 +532,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                           _reminderTime.format(context),
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.primary,
                           ),
                         ),
@@ -557,14 +594,14 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
         height: 36,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.secondaryBg,
+          color: isSelected ? AppColors.primary : AppColors.primaryLight,
           shape: BoxShape.circle,
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isSelected ? Colors.white : AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
         ),
