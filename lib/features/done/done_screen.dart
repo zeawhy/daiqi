@@ -223,9 +223,10 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                   '全部带齐，出门吧！',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: compact ? 22 : 26,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.5,
+                                    fontSize: compact ? 20 : 23,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.4,
+                                    height: 1.28,
                                     color: AppColors.textPrimary,
                                   ),
                                 ),

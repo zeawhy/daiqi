@@ -182,9 +182,10 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       const Text(
                         '这次忘了什么？',
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                          height: 1.28,
                           color: AppColors.textPrimary,
                         ),
                       ),

@@ -28,13 +28,19 @@ class BackpackPainter extends CustomPainter {
     final double width = size.width;
     final double height = size.height;
 
-    // Dimensions
+    // Dimensions for v2 rounded arch dual-strap silhouette
     final double handleHeight = height * 0.16;
-    final double handleWidth = width * 0.38;
-    final double bodyTop = handleHeight * 0.75;
-    final double bodyBottom = height;
+    final double handleWidth = width * 0.32;
+    final double bodyTop = handleHeight * 0.72;
+    final double bodyBottom = height - 2;
     final double bodyHeight = bodyBottom - bodyTop;
-    final double cornerRadius = width * 0.18;
+    final double archHeight = bodyHeight * 0.22;
+
+    // Body margins to leave room for dual shoulder straps
+    final double bodyLeft = width * 0.12;
+    final double bodyRight = width * 0.88;
+    final double bodyWidth = bodyRight - bodyLeft;
+    final double cornerRadius = bodyWidth * 0.20;
 
     // Interpolated colors (Charcoal / Warm Stone -> Forest Green)
     final Color strokeColor = Color.lerp(
@@ -61,7 +67,40 @@ class BackpackPainter extends CustomPainter {
       doneTransition,
     )!;
 
-    // 1. Draw Soft Diffused Glow if hovered, dragged over, or done
+    // 1. Construct v2 Body Path (拱顶 + 竖身 + 圆弧底)
+    final bodyPath = Path();
+    bodyPath.moveTo(bodyLeft, bodyTop + archHeight);
+    if (isOpen) {
+      bodyPath.quadraticBezierTo(
+        width / 2,
+        bodyTop + archHeight + min(16.0, height * 0.08),
+        bodyRight,
+        bodyTop + archHeight,
+      );
+    } else {
+      bodyPath.cubicTo(
+        bodyLeft,
+        bodyTop,
+        bodyRight,
+        bodyTop,
+        bodyRight,
+        bodyTop + archHeight,
+      );
+    }
+    bodyPath.lineTo(bodyRight, bodyBottom - cornerRadius);
+    bodyPath.arcToPoint(
+      Offset(bodyRight - cornerRadius, bodyBottom),
+      radius: Radius.circular(cornerRadius),
+    );
+    bodyPath.lineTo(bodyLeft + cornerRadius, bodyBottom);
+    bodyPath.arcToPoint(
+      Offset(bodyLeft, bodyBottom - cornerRadius),
+      radius: Radius.circular(cornerRadius),
+    );
+    bodyPath.lineTo(bodyLeft, bodyTop + archHeight);
+    bodyPath.close();
+
+    // 2. Draw Soft Diffused Glow if hovered, dragged over, or done
     if (showGlow || isOpen || doneTransition > 0.2) {
       final Color glowColor = doneTransition > 0.2
           ? AppColors.done.withValues(alpha: 0.18 * doneTransition)
@@ -69,14 +108,45 @@ class BackpackPainter extends CustomPainter {
       final Paint glowPaint = Paint()
         ..color = glowColor
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
-      final glowRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(4, bodyTop + 4, width - 8, bodyHeight - 8),
-        Radius.circular(cornerRadius + 4),
-      );
-      canvas.drawRRect(glowRect, glowPaint);
+      canvas.drawPath(bodyPath, glowPaint);
     }
 
-    // 2. Draw Handle (提手)
+    // 3. Draw Shoulder Straps (两侧双肩带弧线，位于包身后方)
+    final strapPaint = Paint()
+      ..color = Color.lerp(
+        AppColors.backpackHardware,
+        AppColors.doneAccent,
+        doneTransition,
+      )!
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(2.0, width * 0.026)
+      ..strokeCap = StrokeCap.round;
+
+    final Path leftStrapPath = Path()
+      ..moveTo(bodyLeft + bodyWidth * 0.06, bodyTop + archHeight * 0.6)
+      ..cubicTo(
+        width * 0.02,
+        height * 0.45,
+        width * 0.02,
+        height * 0.72,
+        bodyLeft + bodyWidth * 0.04,
+        bodyBottom - cornerRadius * 0.5,
+      );
+    canvas.drawPath(leftStrapPath, strapPaint);
+
+    final Path rightStrapPath = Path()
+      ..moveTo(bodyRight - bodyWidth * 0.06, bodyTop + archHeight * 0.6)
+      ..cubicTo(
+        width * 0.98,
+        height * 0.45,
+        width * 0.98,
+        height * 0.72,
+        bodyRight - bodyWidth * 0.04,
+        bodyBottom - cornerRadius * 0.5,
+      );
+    canvas.drawPath(rightStrapPath, strapPaint);
+
+    // 4. Draw Handle (提手)
     final handlePaint = Paint()
       ..color = AppColors.backpackHardware
       ..style = PaintingStyle.stroke
@@ -90,49 +160,13 @@ class BackpackPainter extends CustomPainter {
     );
     canvas.drawArc(handleRect, pi, pi, false, handlePaint);
 
-    // 3. Draw Body Path
-    final bodyRRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        width * 0.04,
-        bodyTop,
-        width * 0.92,
-        bodyHeight - 2,
-      ),
-      Radius.circular(cornerRadius),
-    );
-
-    // If mouth is open, create slightly curved opening at top
-    final bodyPath = Path();
-    if (isOpen) {
-      final rect = bodyRRect.outerRect;
-      final r = cornerRadius;
-      bodyPath.moveTo(rect.left + r, rect.top);
-      // Top curve dipped slightly inward for "open mouth"
-      bodyPath.quadraticBezierTo(
-        rect.center.dx,
-        rect.top + 14,
-        rect.right - r,
-        rect.top,
-      );
-      bodyPath.arcToPoint(Offset(rect.right, rect.top + r), radius: Radius.circular(r));
-      bodyPath.lineTo(rect.right, rect.bottom - r);
-      bodyPath.arcToPoint(Offset(rect.right - r, rect.bottom), radius: Radius.circular(r));
-      bodyPath.lineTo(rect.left + r, rect.bottom);
-      bodyPath.arcToPoint(Offset(rect.left, rect.bottom - r), radius: Radius.circular(r));
-      bodyPath.lineTo(rect.left, rect.top + r);
-      bodyPath.arcToPoint(Offset(rect.left + r, rect.top), radius: Radius.circular(r));
-      bodyPath.close();
-    } else {
-      bodyPath.addRRect(bodyRRect);
-    }
-
     // Draw body background
     final bgPaint = Paint()
       ..color = bodyBgColor
       ..style = PaintingStyle.fill;
     canvas.drawPath(bodyPath, bgPaint);
 
-    // 4. Draw Water Level Fill: dynamic dual sine-wave liquid (填充水位)
+    // 5. Draw Water Level Fill: dynamic dual sine-wave liquid (填充水位)
     if (progress > 0.0) {
       canvas.save();
       canvas.clipPath(bodyPath);
@@ -186,55 +220,67 @@ class BackpackPainter extends CustomPainter {
       canvas.restore();
     }
 
-    // Subtle 3D inner highlight along top-left edge
+    // Subtle 3D inner highlight along top-left dome edge
     final Paint highlightPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.45)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = max(1.5, width * 0.018)
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      Rect.fromLTWH(bodyRRect.left + 2, bodyTop + 6, cornerRadius * 1.4,
-          cornerRadius * 1.4),
-      pi,
-      pi * 0.45,
-      false,
-      highlightPaint,
+    final Path highlightPath = Path()
+      ..moveTo(bodyLeft + 3, bodyTop + archHeight)
+      ..cubicTo(
+        bodyLeft + 3,
+        bodyTop + 3,
+        width * 0.35,
+        bodyTop + 2,
+        width * 0.42,
+        bodyTop + 4,
+      );
+    canvas.drawPath(highlightPath, highlightPaint);
+
+    // 6. Front lower curved pocket (圆弧前袋与缝线)
+    final double pocketTop = bodyTop + bodyHeight * 0.58;
+    final double pocketBottom = bodyBottom - 2;
+    final double pocketLeft = bodyLeft + bodyWidth * 0.08;
+    final double pocketRight = bodyRight - bodyWidth * 0.08;
+    final double pocketRadius = cornerRadius * 0.7;
+
+    final RRect pocketRRect = RRect.fromRectAndCorners(
+      Rect.fromLTRB(pocketLeft, pocketTop, pocketRight, pocketBottom),
+      topLeft: Radius.circular(pocketRadius),
+      topRight: Radius.circular(pocketRadius),
+      bottomLeft: Radius.circular(cornerRadius * 0.8),
+      bottomRight: Radius.circular(cornerRadius * 0.8),
     );
 
-    // Front lower pocket seam detail (only on full-size backpack)
-    if (width >= 100) {
-      final RRect pocketRRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          width * 0.14,
-          bodyTop + bodyHeight * 0.62,
-          width * 0.72,
-          bodyHeight * 0.28,
-        ),
-        Radius.circular(cornerRadius * 0.55),
-      );
-      canvas.drawRRect(
-        pocketRRect,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.22)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.8,
-      );
-    }
+    final Color pocketStrokeColor = Color.lerp(
+      AppColors.backpackHardware.withValues(alpha: width >= 60 ? 0.35 : 0.60),
+      AppColors.doneAccent.withValues(alpha: 0.60),
+      doneTransition,
+    )!;
 
-    // 5. Draw Zipper (拉链)
-    final double zipperY = bodyTop + bodyHeight * 0.22;
-    final double zipperLeft = width * 0.12;
-    final double zipperRight = width * 0.88;
+    canvas.drawRRect(
+      pocketRRect,
+      Paint()
+        ..color = pocketStrokeColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.2, width * 0.016),
+    );
+
+    // 7. Draw Zipper (拉链与按比例缩放拉链头，修复 40dp 黑块)
+    final double zipperY = bodyTop + archHeight * 0.88;
+    final double zipperLeft = bodyLeft + bodyWidth * 0.10;
+    final double zipperRight = bodyRight - bodyWidth * 0.10;
     final double zipperSpan = zipperRight - zipperLeft;
 
     final zipperLinePaint = Paint()
       ..color = AppColors.backpackHardware.withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = max(1.5, width * 0.016);
+      ..strokeWidth = max(1.2, width * 0.014);
 
-    // Dashed line for zipper track
-    const dashWidth = 4.0;
-    const dashSpace = 3.0;
+    final isSmallSize = width < 60;
+    final double dashWidth = isSmallSize ? 3.0 : 4.0;
+    final double dashSpace = isSmallSize ? 2.0 : 3.0;
     double currentX = zipperLeft;
     while (currentX < zipperRight) {
       final double endX = min(currentX + dashWidth, zipperRight);
@@ -242,10 +288,17 @@ class BackpackPainter extends CustomPainter {
       currentX += dashWidth + dashSpace;
     }
 
-    // Zipper Slider (拉链头)
-    final double sliderX = isOpen
-        ? zipperLeft + 4.0 // Pulled open to the side
+    // Zipper Slider (拉链头): size < 60 时按 size * 0.06 缩放，不设大下限
+    final double sliderWidth = isSmallSize ? width * 0.06 : max(8.0, width * 0.07);
+    final double sliderHeight = isSmallSize ? height * 0.08 : max(12.0, height * 0.07);
+
+    final double targetSliderX = isOpen
+        ? zipperLeft + 2.0
         : zipperLeft + (zipperSpan * zipperProgress.clamp(0.0, 1.0));
+    final double sliderX = targetSliderX.clamp(
+      zipperLeft + sliderWidth / 2,
+      zipperRight - sliderWidth / 2,
+    );
 
     final sliderPaint = Paint()
       ..color = AppColors.backpackHardware
@@ -254,26 +307,28 @@ class BackpackPainter extends CustomPainter {
     final sliderRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
         center: Offset(sliderX, zipperY),
-        width: max(8.0, width * 0.07),
-        height: max(12.0, height * 0.07),
+        width: sliderWidth,
+        height: sliderHeight,
       ),
-      const Radius.circular(3),
+      Radius.circular(isSmallSize ? 1.5 : 3.0),
     );
     canvas.drawRRect(sliderRect, sliderPaint);
 
-    // Zipper pull tab (拉片)
-    final pullTabPath = Path()
-      ..moveTo(sliderX - 2.5, zipperY + 4)
-      ..lineTo(sliderX + 2.5, zipperY + 4)
-      ..lineTo(sliderX + 2.0, zipperY + 14)
-      ..lineTo(sliderX - 2.0, zipperY + 14)
-      ..close();
-    canvas.drawPath(pullTabPath, sliderPaint);
+    // Zipper pull tab (拉片): size < 60 时隐藏长拉片，彻底消除 40dp 黑块
+    if (!isSmallSize) {
+      final pullTabPath = Path()
+        ..moveTo(sliderX - 2.5, zipperY + 4)
+        ..lineTo(sliderX + 2.5, zipperY + 4)
+        ..lineTo(sliderX + 2.0, zipperY + 14)
+        ..lineTo(sliderX - 2.0, zipperY + 14)
+        ..close();
+      canvas.drawPath(pullTabPath, sliderPaint);
+    }
 
-    // 6. Draw Minimalist Completion Check Badge when done
+    // 8. Draw Minimalist Completion Check Badge when done (居中对勾)
     if (smileOpacity > 0.0) {
-      final Offset badgeCenter = Offset(width / 2, bodyTop + bodyHeight * 0.56);
-      final double badgeRadius = max(8.0, width * 0.14);
+      final Offset badgeCenter = Offset(width / 2, bodyTop + bodyHeight * 0.44);
+      final double badgeRadius = max(7.0, width * 0.13);
 
       final Paint badgeBgPaint = Paint()
         ..color = Colors.white.withValues(alpha: 0.22 * smileOpacity)
@@ -283,7 +338,7 @@ class BackpackPainter extends CustomPainter {
       final Paint badgeRingPaint = Paint()
         ..color = Colors.white.withValues(alpha: 0.55 * smileOpacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(1.2, width * 0.012);
+        ..strokeWidth = max(1.0, width * 0.012);
       canvas.drawCircle(badgeCenter, badgeRadius, badgeRingPaint);
 
       final Path checkPath = Path()
@@ -294,17 +349,19 @@ class BackpackPainter extends CustomPainter {
       final Paint checkPaint = Paint()
         ..color = Colors.white.withValues(alpha: smileOpacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(2.0, width * 0.026)
+        ..strokeWidth = max(1.8, width * 0.026)
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(checkPath, checkPaint);
     }
 
-    // 7. Draw Body Stroke
+    // 9. Draw Body Stroke
     final strokePaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = max(2.0, width * 0.028);
+      ..strokeWidth = max(2.0, width * 0.028)
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(bodyPath, strokePaint);
   }
 

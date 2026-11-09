@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../shared/constants/emoji_presets.dart';
 import '../../shared/services/notification_service.dart';
+import '../../shared/widgets/brand_backpack_icon.dart';
 
 class ChecklistEditorScreen extends ConsumerStatefulWidget {
   static const int maxMnemonicLength = 8;
@@ -249,7 +250,13 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       ],
                     ),
                     alignment: Alignment.center,
-                    child: Text(_selectedEmoji, style: const TextStyle(fontSize: 26)),
+                    child: ChecklistAvatar(
+                      emoji: _selectedEmoji,
+                      size: 26,
+                      strokeWidth: 2.2,
+                      strokeColor: AppColors.primary,
+                      hardwareColor: AppColors.backpackHardware,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -646,7 +653,13 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                             width: _selectedEmoji == e ? 2 : 1,
                           ),
                         ),
-                        child: Text(e, style: const TextStyle(fontSize: 24)),
+                        child: ChecklistAvatar(
+                          emoji: e,
+                          size: 24,
+                          strokeWidth: 2.0,
+                          strokeColor: AppColors.primary,
+                          hardwareColor: AppColors.backpackHardware,
+                        ),
                       ),
                     );
                   }).toList(),

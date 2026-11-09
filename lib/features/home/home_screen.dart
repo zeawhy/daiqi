@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/models/pack_models.dart';
 import '../../shared/services/haptic_service.dart';
+import '../../shared/widgets/brand_backpack_icon.dart';
 import '../../shared/widgets/dashed_border.dart';
 import '../../shared/widgets/mini_backpack.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -121,8 +122,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: checklistsAsync.when(
+      body: Stack(
+        children: [
+          // 0. Warm Rice Grey Gradient Masthead Backdrop (从屏幕物理最顶部向下延伸至 215dp)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 215,
+            child: IgnorePointer(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(32),
+                ),
+                child: Container(
+                  key: const ValueKey('home_masthead_backdrop'),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.headerBackdropTop,
+                        AppColors.headerBackdropBottom,
+                      ],
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Top-right Santorini warm sun glow (25% pastelAmber 暖阳微晕)
+                      Positioned(
+                        top: -20,
+                        right: -20,
+                        width: 280,
+                        height: 280,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                Color(0x40FEF3C7),
+                                Color(0x00FEF3C7),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: checklistsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('加载失败: $e')),
           data: (checklists) {
@@ -196,10 +248,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               const Text(
                                 '带齐了',
                                 style: TextStyle(
-                                  fontSize: 29,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.6,
-                                  height: 1.18,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.0,
+                                  height: 1.20,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
@@ -217,34 +269,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ],
                           ),
                         ),
-                        // Floating animated mini-backpack in header
-                        AnimatedBuilder(
-                          animation: _floatController,
-                          builder: (context, child) {
-                            final dy = reducedMotion
-                                ? 0.0
-                                : sin(_floatController.value * pi) * 4.0;
-                            return Transform.translate(
-                              offset: Offset(0, -dy),
-                              child: child,
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.card,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color.fromRGBO(28, 25, 23, 0.05),
-                                  blurRadius: 18,
-                                  offset: Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: MiniBackpack(
-                              progress: heroList?.progress ?? 0.0,
-                              size: 40,
+                        // Floating animated mini-backpack in header (wrapped in RepaintBoundary)
+                        RepaintBoundary(
+                          child: AnimatedBuilder(
+                            animation: _floatController,
+                            builder: (context, child) {
+                              final dy = reducedMotion
+                                  ? 0.0
+                                  : sin(_floatController.value * pi) * 4.0;
+                              return Transform.translate(
+                                offset: Offset(0, -dy),
+                                child: child,
+                              );
+                            },
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: AppColors.card,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color.fromRGBO(28, 25, 23, 0.05),
+                                    blurRadius: 18,
+                                    offset: Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: MiniBackpack(
+                                progress: heroList?.progress ?? 0.0,
+                                size: 32,
+                              ),
                             ),
                           ),
                         ),
@@ -274,9 +330,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             const Text(
                               '我的清单',
                               style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.4,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                                height: 1.35,
                                 color: AppColors.textPrimary,
                               ),
                             ),
@@ -344,11 +401,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ],
                         ),
                         alignment: Alignment.center,
-                        child: const Column(
+                        child: Column(
                           children: [
-                            Text('🎒', style: TextStyle(fontSize: 36)),
-                            SizedBox(height: 10),
-                            Text(
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryLight,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: const BrandBackpackIcon(
+                                size: 34,
+                                strokeWidth: 2.4,
+                                strokeColor: AppColors.primary,
+                                checkColor: AppColors.done,
+                                showCheck: true,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
                               '还没有自建清单',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
@@ -356,8 +428,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            SizedBox(height: 4),
-                            Text(
+                            const SizedBox(height: 4),
+                            const Text(
                               '创建通勤、健身或差旅清单，出门不再慌张',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
@@ -398,6 +470,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             );
           },
         ),
+      ),
+        ],
       ),
     );
   }
@@ -466,9 +540,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         borderRadius: BorderRadius.circular(20),
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        hero.emoji,
-                        style: const TextStyle(fontSize: 30),
+                      child: ChecklistAvatar(
+                        emoji: hero.emoji,
+                        size: 30,
+                        strokeWidth: 2.2,
+                        strokeColor: AppColors.primary,
                       ),
                     ),
                   ),
@@ -486,9 +562,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: AppColors.textPrimary,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.2,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.4,
+                                  height: 1.28,
                                 ),
                               ),
                             ),
@@ -666,9 +743,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: Text(
-                      item.emoji,
-                      style: const TextStyle(fontSize: 22),
+                    child: ChecklistAvatar(
+                      emoji: item.emoji,
+                      size: 22,
+                      strokeWidth: 2.0,
+                      strokeColor: isCompleted ? AppColors.done : AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -681,9 +760,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                            height: 1.35,
                             color: AppColors.textPrimary,
                           ),
                         ),
@@ -890,12 +970,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
                 ListTile(
-                  leading: Text(item.emoji, style: const TextStyle(fontSize: 28)),
+                  leading: ChecklistAvatar(
+                    emoji: item.emoji,
+                    size: 28,
+                    strokeWidth: 2.2,
+                    strokeColor: AppColors.primary,
+                  ),
                   title: Text(
                     item.name,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      letterSpacing: 0.3,
+                      height: 1.35,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   subtitle: Text('共 ${item.totalCount} 件物品'),

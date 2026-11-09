@@ -944,9 +944,10 @@ class _PackScreenState extends ConsumerState<PackScreen>
           Text(
             _checklist!.name,
             style: TextStyle(
-              fontSize: compactMode ? 20 : 26,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.5,
+              fontSize: compactMode ? 19 : 23,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+              height: 1.28,
               color: AppColors.textPrimary,
             ),
           ),

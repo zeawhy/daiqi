@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../shared/services/audio_service.dart';
 import '../../shared/services/haptic_service.dart';
 import '../../shared/services/notification_service.dart';
+import '../../shared/widgets/brand_backpack_icon.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -289,10 +290,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   width: 38,
                   height: 38,
                   decoration: const BoxDecoration(
-                    color: AppColors.pastelLavender,
+                    color: AppColors.primaryLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.backpack_outlined, color: AppColors.textPrimary, size: 20),
+                  alignment: Alignment.center,
+                  child: const BrandBackpackIcon(
+                    size: 20,
+                    showCheck: true,
+                    strokeWidth: 1.8,
+                    strokeColor: AppColors.textPrimary,
+                    checkColor: AppColors.done,
+                  ),
                 ),
                 title: const Text('关于「带齐了」', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('出门前 30 秒，确认带齐'),

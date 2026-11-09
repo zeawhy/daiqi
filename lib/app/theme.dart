@@ -43,6 +43,10 @@ class AppColors {
   // Hardware & Accents
   static const Color backpackHardware = Color(0xFF57534E);
 
+  // Masthead Backdrop Gradients (Santorini Warm Travertine)
+  static const Color headerBackdropTop = Color(0xFFEAE7E1);
+  static const Color headerBackdropBottom = Color(0xFFF5F5F4);
+
   // Editorial Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -84,64 +88,66 @@ class AppTheme {
       ],
       textTheme: const TextTheme(
         displayLarge: TextStyle(
-          fontSize: 30,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.6,
-          height: 1.18,
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+          height: 1.20,
           color: AppColors.textPrimary,
         ),
         headlineLarge: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-          height: 1.22,
-          color: AppColors.textPrimary,
-        ),
-        headlineMedium: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
+          fontSize: 21,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
           height: 1.25,
           color: AppColors.textPrimary,
         ),
+        headlineMedium: TextStyle(
+          fontSize: 19,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+          height: 1.28,
+          color: AppColors.textPrimary,
+        ),
         titleLarge: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
-          height: 1.3,
+          height: 1.35,
           color: AppColors.textPrimary,
         ),
         titleMedium: TextStyle(
-          fontSize: 15,
+          fontSize: 15.5,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.2,
+          letterSpacing: 0.3,
           height: 1.35,
           color: AppColors.textPrimary,
         ),
         bodyLarge: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          letterSpacing: 0.15,
+          letterSpacing: 0.3,
           height: 1.45,
           color: AppColors.textPrimary,
         ),
         bodyMedium: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          letterSpacing: 0.2,
-          height: 1.4,
+          letterSpacing: 0.3,
+          height: 1.40,
           color: AppColors.textSecondary,
         ),
         labelLarge: TextStyle(
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
+          height: 1.20,
           color: AppColors.textPrimary,
         ),
         labelSmall: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
+          letterSpacing: 0.2,
+          height: 1.20,
           color: AppColors.textSecondary,
         ),
       ),
@@ -162,10 +168,10 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: AppColors.textPrimary,
-          fontSize: 26,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-          height: 1.2,
+          fontSize: 21,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
+          height: 1.25,
         ),
       ),
       cardTheme: CardThemeData(
