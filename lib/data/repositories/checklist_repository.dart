@@ -280,11 +280,26 @@ class ChecklistRepository {
   }
 
   /// Watch all checklist summaries, ordered by sortOrder.
+  /// Listens to all tables that affect summary state (checklists, items,
+  /// sessions, session items, forgot records, global items).
   Stream<List<ChecklistSummaryModel>> watchAllSummaries() {
-    return (db.select(db.checklistLists)
-          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+    return db
+        .customSelect(
+          'SELECT 1',
+          readsFrom: {
+            db.checklistLists,
+            db.listItems,
+            db.packSessions,
+            db.packSessionItems,
+            db.forgotRecords,
+            db.globalItems,
+          },
+        )
         .watch()
-        .asyncMap((lists) async {
+        .asyncMap((_) async {
+      final lists = await (db.select(db.checklistLists)
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+          .get();
       final List<ChecklistSummaryModel> summaries = [];
       for (final list in lists) {
         final summary = await _getSummaryForChecklist(list);
@@ -314,6 +329,7 @@ class ChecklistRepository {
         : (latestSession.departedAt ?? latestSession.completedAt ?? latestSession.startedAt);
 
     int packedCount = 0;
+    int skippedCount = 0;
     int highRiskCount = 0;
 
     for (final item in items) {
@@ -328,8 +344,12 @@ class ChecklistRepository {
                   t.sessionId.equals(activeSession.id) &
                   t.listItemId.equals(item.id)))
             .getSingleOrNull();
-        if (sessionItem != null && sessionItem.packedAt != null && !sessionItem.skipped) {
-          packedCount++;
+        if (sessionItem != null) {
+          if (sessionItem.skipped) {
+            skippedCount++;
+          } else if (sessionItem.packedAt != null) {
+            packedCount++;
+          }
         }
       }
     }
@@ -354,6 +374,7 @@ class ChecklistRepository {
       reminderWeekdays: weekdays,
       totalCount: items.length,
       packedCount: packedCount,
+      skippedCount: skippedCount,
       highRiskCount: highRiskCount,
       itemNames: items.map((i) => i.name).toList(),
       activeSessionStartedAt: activeSession?.startedAt,
@@ -523,22 +544,35 @@ class ChecklistRepository {
       ),
     );
 
+    // Preserve existing listItem IDs by globalItemId so active session packed/skipped states survive edits
+    final existingListItems = await getItemsForChecklist(listId);
+    final existingByGlobalId = <String, ListItem>{
+      for (final existing in existingListItems) existing.globalItemId: existing,
+    };
+
     // Delete existing items
     await (db.delete(db.listItems)..where((t) => t.listId.equals(listId))).go();
 
-    // Insert new items
+    // Insert new items (reusing existing listItem.id when the same globalItem remains)
+    final usedIds = <String>{};
     for (int i = 0; i < items.length; i++) {
       final item = items[i];
       final globalItem = await _findOrCreateGlobalItem(item.name, item.emoji);
+      final matchedExisting = existingByGlobalId[globalItem.id];
+      final itemId = (matchedExisting != null && !usedIds.contains(matchedExisting.id))
+          ? matchedExisting.id
+          : _uuid.v4();
+      usedIds.add(itemId);
+
       await db.into(db.listItems).insert(
             ListItemsCompanion.insert(
-              id: _uuid.v4(),
+              id: itemId,
               listId: listId,
               globalItemId: globalItem.id,
               name: item.name,
               emoji: item.emoji,
               sortOrder: Value(i),
-              createdAt: now,
+              createdAt: matchedExisting?.createdAt ?? now,
             ),
           );
     }
@@ -581,6 +615,7 @@ class ChecklistRepository {
               );
         }
       }
+      db.markTablesUpdated([db.packSessionItems]);
     }
   }
 

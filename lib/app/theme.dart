@@ -4,48 +4,60 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const Color textPrimary = Color(0xFF1F242D);
-  static const Color textSecondary = Color(0xFF5F6672);
-  static const Color background = Color(0xFFF6F7FB);
+  static const Color textPrimary = Color(0xFF1C1917);
+  static const Color textSecondary = Color(0xFF57534E);
+  static const Color background = Color(0xFFF5F5F4);
   static const Color card = Color(0xFFFFFFFF);
-  static const Color cardPacked = Color(0xFFEEF2F6);
-  static const Color secondaryBg = Color(0xFFECEFF5);
-  static const Color border = Color(0xFFE1E6EF);
+  static const Color cardPacked = Color(0xFFF0EFED);
+  static const Color secondaryBg = Color(0xFFEEEEEC);
+  static const Color border = Color(0xFFE7E5E4);
 
-  // Primary Blue (Vibrant Sky / Cobalt)
-  static const Color primary = Color(0xFF2575FC);
-  static const Color primaryLight = Color(0xFFE7F0FF);
-  static const Color primaryAccent = Color(0xFF53A0FD);
+  // Primary Charcoal (Santorini Warm Editorial Minimalist)
+  static const Color primary = Color(0xFF262626);
+  static const Color primaryLight = Color(0xFFECEAE6);
+  static const Color primaryAccent = Color(0xFF3A3835);
 
-  // Done Green (Playful Mint / Emerald)
-  static const Color done = Color(0xFF198045);
-  static const Color doneAccent = Color(0xFF28B463);
-  static const Color doneLight = Color(0xFFE6F8EE);
+  // Done Forest Green
+  static const Color done = Color(0xFF1F6F4A);
+  static const Color doneAccent = Color(0xFF2A855B);
+  static const Color doneLight = Color(0xFFEAF5EF);
 
-  // Warning / Remaining Orange
-  static const Color orange = Color(0xFF9E5E00);
-  static const Color orangeLight = Color(0xFFFEF4E5);
+  // Warning / Remaining Amber-Brown
+  static const Color orange = Color(0xFF8A5200);
+  static const Color orangeLight = Color(0xFFFEF3C7);
 
-  // High-Risk Danger Red / Coral
-  static const Color danger = Color(0xFFC8282D);
-  static const Color dangerLight = Color(0xFFFFECEC);
+  // High-Risk Danger Coral Red
+  static const Color danger = Color(0xFFB82E2E);
+  static const Color dangerLight = Color(0xFFFDECEC);
 
-  // Playful Accents for Dynamic Animations & Character Details
-  static const Color cheekPink = Color(0xFFFF8FA3);
-  static const Color sparkleGold = Color(0xFFFFCA28);
-  static const Color backpackHardware = Color(0xFF566B84);
+  // Editorial Soft Pastel Pills
+  static const Color pastelLavender = Color(0xFFEDE9FE);
+  static const Color pastelAmber = Color(0xFFFEF3C7);
+  static const Color pastelSky = Color(0xFFE0F2FE);
+  static const List<Color> pastelPills = [
+    pastelLavender,
+    pastelAmber,
+    pastelSky,
+  ];
 
-  // Dynamic Gradients
+  // Hardware & Accents
+  static const Color backpackHardware = Color(0xFF57534E);
+
+  // Masthead Backdrop Gradients (Santorini Warm Travertine)
+  static const Color headerBackdropTop = Color(0xFFEAE7E1);
+  static const Color headerBackdropBottom = Color(0xFFF5F5F4);
+
+  // Editorial Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1F5FD9), Color(0xFF2563EB)],
+    colors: [Color(0xFF262626), Color(0xFF3A3835)],
   );
 
   static const LinearGradient doneGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF198045), Color(0xFF28B463)],
+    colors: [Color(0xFF1F6F4A), Color(0xFF2A855B)],
   );
 }
 
@@ -67,11 +79,78 @@ class AppTheme {
         onError: Colors.white,
       ),
       fontFamilyFallback: const [
+        'HarmonyOS Sans SC',
+        'MiSans',
         'PingFang SC',
         'Source Han Sans SC',
         'Noto Sans CJK SC',
         'sans-serif',
       ],
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+          height: 1.20,
+          color: AppColors.textPrimary,
+        ),
+        headlineLarge: TextStyle(
+          fontSize: 21,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
+          height: 1.25,
+          color: AppColors.textPrimary,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 19,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+          height: 1.28,
+          color: AppColors.textPrimary,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+          height: 1.35,
+          color: AppColors.textPrimary,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 15.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+          height: 1.35,
+          color: AppColors.textPrimary,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.3,
+          height: 1.45,
+          color: AppColors.textPrimary,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.3,
+          height: 1.40,
+          color: AppColors.textSecondary,
+        ),
+        labelLarge: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+          height: 1.20,
+          color: AppColors.textPrimary,
+        ),
+        labelSmall: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+          height: 1.20,
+          color: AppColors.textSecondary,
+        ),
+      ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: ZoomPageTransitionsBuilder(),
@@ -89,9 +168,10 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: AppColors.textPrimary,
-          fontSize: 24,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.3,
+          fontSize: 21,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
+          height: 1.25,
         ),
       ),
       cardTheme: CardThemeData(
@@ -99,8 +179,8 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: AppColors.border, width: 1.2),
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.border, width: 0.5),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -108,13 +188,11 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -123,27 +201,23 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary, width: 1.5),
+          side: const BorderSide(color: AppColors.border, width: 1.0),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -152,16 +226,16 @@ class AppTheme {
         fillColor: AppColors.card,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.border, width: 1.2),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppColors.border, width: 0.8),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.border, width: 1.2),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppColors.border, width: 0.8),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2.0),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
       switchTheme: SwitchThemeData(
@@ -175,16 +249,16 @@ class AppTheme {
         }),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.secondaryBg,
-        selectedColor: AppColors.primaryLight,
-        side: const BorderSide(color: AppColors.border),
+        backgroundColor: AppColors.card,
+        selectedColor: AppColors.primary,
+        side: BorderSide.none,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
       listTileTheme: ListTileThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
@@ -192,7 +266,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.textPrimary,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
@@ -206,7 +280,7 @@ class AppTheme {
         backgroundColor: AppColors.card,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
         ),
       ),
     );

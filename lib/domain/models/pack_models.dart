@@ -58,6 +58,7 @@ class ChecklistSummaryModel {
   final List<int> reminderWeekdays;
   final int totalCount;
   final int packedCount;
+  final int skippedCount;
   final int highRiskCount;
   final List<String> itemNames;
   final DateTime? activeSessionStartedAt;
@@ -75,20 +76,25 @@ class ChecklistSummaryModel {
     required this.reminderWeekdays,
     required this.totalCount,
     required this.packedCount,
+    this.skippedCount = 0,
     required this.highRiskCount,
     required this.itemNames,
     this.activeSessionStartedAt,
     this.lastUsedAt,
   });
 
-  double get progress => totalCount == 0 ? 0.0 : (packedCount / totalCount).clamp(0.0, 1.0);
+  /// 当前会话有效应装总数（扣除“今天不带”跳过的物品）
+  int get activeTotalCount => (totalCount - skippedCount).clamp(0, totalCount);
+
+  double get progress =>
+      activeTotalCount == 0 ? 0.0 : (packedCount / activeTotalCount).clamp(0.0, 1.0);
 
   // 剩余未装件数
-  int get remainingCount => (totalCount - packedCount).clamp(0, totalCount);
+  int get remainingCount => (activeTotalCount - packedCount).clamp(0, activeTotalCount);
 
   // 是否存在未完成的进行中会话（12 小时有效期内且尚未全部装完）
   bool get hasUnfinishedActiveSession =>
-      activeSessionStartedAt != null && totalCount > 0 && packedCount < totalCount;
+      activeSessionStartedAt != null && activeTotalCount > 0 && packedCount < activeTotalCount;
 
   /// 计算距离下一次定时提醒的时间间隔（仅当启用提醒且时间/星期有效时返回非空）。
   Duration? nextReminderDelay(DateTime now) {

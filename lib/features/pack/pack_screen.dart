@@ -879,6 +879,15 @@ class _PackScreenState extends ConsumerState<PackScreen>
     List<PackItemModel> items, {
     bool compactMode = false,
   }) {
+    final pillHeight = compactMode ? 28.0 : 36.0;
+    const pillShadow = [
+      BoxShadow(
+        color: Color.fromRGBO(28, 25, 23, 0.05),
+        blurRadius: 12,
+        offset: Offset(0, 3),
+      ),
+    ];
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: compactMode ? 4 : 8),
       child: Column(
@@ -889,13 +898,20 @@ class _PackScreenState extends ConsumerState<PackScreen>
             children: [
               GestureDetector(
                 onTap: () => _handleBackPress(items),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: compactMode ? 4 : 8),
+                child: Container(
+                  height: pillHeight,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: pillShadow,
+                  ),
                   child: const Text(
                     '‹ 返回',
                     style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.primary,
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -903,13 +919,20 @@ class _PackScreenState extends ConsumerState<PackScreen>
               ),
               GestureDetector(
                 onTap: _openEditor,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: compactMode ? 4 : 8),
+                child: Container(
+                  height: pillHeight,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: pillShadow,
+                  ),
                   child: const Text(
                     '编辑',
                     style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.primary,
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -921,8 +944,10 @@ class _PackScreenState extends ConsumerState<PackScreen>
           Text(
             _checklist!.name,
             style: TextStyle(
-              fontSize: compactMode ? 20 : 26,
-              fontWeight: FontWeight.bold,
+              fontSize: compactMode ? 19 : 23,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+              height: 1.28,
               color: AppColors.textPrimary,
             ),
           ),
@@ -946,7 +971,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                     text: '$remainingCount 件',
                     style: const TextStyle(
                       color: AppColors.orange,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const TextSpan(text: ' · 把东西拖进包里'),
@@ -974,8 +999,11 @@ class _PackScreenState extends ConsumerState<PackScreen>
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.dangerLight,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.danger.withValues(alpha: 0.22),
+            width: 0.8,
+          ),
         ),
         child: Row(
           children: [

@@ -48,19 +48,19 @@ class MainScaffold extends ConsumerWidget {
             height: 64,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: AppColors.border, width: 1.2),
-              boxShadow: [
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.border, width: 0.5),
+              boxShadow: const [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.08),
+                  color: Color.fromRGBO(28, 25, 23, 0.06),
                   blurRadius: 24,
-                  offset: const Offset(0, 8),
+                  offset: Offset(0, 8),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Color.fromRGBO(28, 25, 23, 0.03),
                   blurRadius: 6,
-                  offset: const Offset(0, 2),
+                  offset: Offset(0, 2),
                 ),
               ],
             ),
@@ -70,6 +70,7 @@ class MainScaffold extends ConsumerWidget {
                 final tab = _tabs[index];
                 final isSelected = index == currentIndex;
                 return Expanded(
+                  flex: isSelected ? 4 : 3,
                   child: _AnimatedNavTab(
                     config: tab,
                     isSelected: isSelected,
@@ -125,11 +126,11 @@ class _AnimatedNavTab extends StatelessWidget {
       child: AnimatedContainer(
         duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 280),
         curve: reducedMotion ? Curves.linear : Curves.easeOutBack,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 3),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -150,8 +151,8 @@ class _AnimatedNavTab extends StatelessWidget {
               },
               child: Icon(
                 isSelected ? config.selectedIcon : config.icon,
-                size: 22,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                size: 21,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
               ),
             ),
             if (reducedMotion)
@@ -164,8 +165,8 @@ class _AnimatedNavTab extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                       ),
                     )
@@ -183,8 +184,8 @@ class _AnimatedNavTab extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
                       )

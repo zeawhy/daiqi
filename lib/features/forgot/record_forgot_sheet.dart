@@ -144,12 +144,12 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        left: 20,
-        right: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 22,
+        right: 22,
         top: 12,
       ),
       child: _isLoading
@@ -182,8 +182,10 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       const Text(
                         '这次忘了什么？',
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                          height: 1.28,
                           color: AppColors.textPrimary,
                         ),
                       ),
@@ -198,6 +200,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                     _buildSubtitle(),
                     style: const TextStyle(
                       fontSize: 13,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -214,18 +217,19 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                           return FilterChip(
                             label: Text('${item.emoji} ${item.name}'),
                             selected: isSelected,
-                            selectedColor: AppColors.dangerLight,
+                            selectedColor: AppColors.primary,
                             backgroundColor: AppColors.background,
-                            checkmarkColor: AppColors.danger,
+                            checkmarkColor: Colors.white,
                             labelStyle: TextStyle(
-                              color: isSelected ? AppColors.danger : AppColors.textPrimary,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? Colors.white : AppColors.textPrimary,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                             ),
                             side: BorderSide(
-                              color: isSelected ? AppColors.danger : AppColors.border,
+                              color: isSelected ? AppColors.primary : AppColors.border,
+                              width: 0.8,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             onSelected: (val) {
                               setState(() {
@@ -243,18 +247,19 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                           return FilterChip(
                             label: Text('📦 $name'),
                             selected: isSelected,
-                            selectedColor: AppColors.dangerLight,
+                            selectedColor: AppColors.primary,
                             backgroundColor: AppColors.background,
-                            checkmarkColor: AppColors.danger,
+                            checkmarkColor: Colors.white,
                             labelStyle: TextStyle(
-                              color: isSelected ? AppColors.danger : AppColors.textPrimary,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? Colors.white : AppColors.textPrimary,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                             ),
                             side: BorderSide(
-                              color: isSelected ? AppColors.danger : AppColors.border,
+                              color: isSelected ? AppColors.primary : AppColors.border,
+                              width: 0.8,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             onSelected: (val) {
                               setState(() {
@@ -280,16 +285,16 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                           decoration: InputDecoration(
                             hintText: '＋ 清单外的物品',
                             hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             filled: true,
                             fillColor: AppColors.background,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: const BorderSide(color: AppColors.border, width: 0.8),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: const BorderSide(color: AppColors.border, width: 0.8),
                             ),
                           ),
                           onSubmitted: (_) => _addCustomItem(),
@@ -299,7 +304,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       IconButton.filled(
                         style: IconButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                         icon: const Icon(Icons.add, color: Colors.white),
                         onPressed: _addCustomItem,
@@ -332,14 +337,12 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                   // Main Button: "记下来，下次提醒我"
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
+                    height: 54,
                     child: FilledButton(
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.danger,
+                        backgroundColor: AppColors.primary,
                         disabledBackgroundColor: AppColors.border,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                        shape: const StadiumBorder(),
                       ),
                       onPressed: _selectedItems.isEmpty || _isSaving ? null : _save,
                       child: _isSaving
@@ -355,7 +358,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                               '记下来，下次提醒我',
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
                             ),
