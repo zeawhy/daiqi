@@ -115,8 +115,9 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                     '遗忘记录',
                                     style: TextStyle(
                                       fontSize: 26,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.4,
+                                      height: 1.2,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
@@ -126,6 +127,8 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.2,
+                                      height: 1.35,
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
@@ -378,8 +381,9 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontSize: 23,
+              fontWeight: FontWeight.w800,
+              fontFeatures: const [FontFeature.tabularFigures()],
               color: valueColor,
             ),
           ),
@@ -388,6 +392,8 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
             label,
             style: const TextStyle(
               fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
               color: AppColors.textSecondary,
             ),
           ),

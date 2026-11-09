@@ -459,7 +459,6 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         ),
                         Switch(
                           value: _mnemonicEnabled,
-                          activeThumbColor: AppColors.primary,
                           onChanged: (val) {
                             setState(() {
                               _mnemonicEnabled = val;
@@ -514,7 +513,6 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         ),
                         Switch(
                           value: _reminderEnabled,
-                          activeThumbColor: AppColors.primary,
                           onChanged: (val) {
                             setState(() {
                               _reminderEnabled = val;

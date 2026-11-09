@@ -70,6 +70,7 @@ class MainScaffold extends ConsumerWidget {
                 final tab = _tabs[index];
                 final isSelected = index == currentIndex;
                 return Expanded(
+                  flex: isSelected ? 4 : 3,
                   child: _AnimatedNavTab(
                     config: tab,
                     isSelected: isSelected,
@@ -125,8 +126,8 @@ class _AnimatedNavTab extends StatelessWidget {
       child: AnimatedContainer(
         duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 280),
         curve: reducedMotion ? Curves.linear : Curves.easeOutBack,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(22),

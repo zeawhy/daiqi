@@ -184,6 +184,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.3,
                                           color: AppColors.textPrimary,
                                         ),
                                       ),
@@ -195,18 +196,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               const Text(
                                 '带齐了',
                                 style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.5,
+                                  fontSize: 29,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                  height: 1.18,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Text(
                                 _formatWeekdaySubtitle(),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.4,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                   color: AppColors.textSecondary,
                                 ),
                               ),
@@ -271,7 +275,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               '我的清单',
                               style: TextStyle(
                                 fontSize: 17,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
                                 color: AppColors.textPrimary,
                               ),
                             ),
@@ -482,8 +487,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 style: const TextStyle(
                                   color: AppColors.textPrimary,
                                   fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.3,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                             ),
@@ -507,6 +512,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       : AppColors.textSecondary,
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w600,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
                                 ),
                               ),
                             ),
@@ -596,8 +602,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       Text(
                         ctaText,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           fontSize: 15,
+                          letterSpacing: 0.4,
+                          fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -674,7 +682,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
                             color: AppColors.textPrimary,
                           ),
                         ),
@@ -689,6 +698,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.2,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                   color: AppColors.textSecondary,
                                 ),
                               ),

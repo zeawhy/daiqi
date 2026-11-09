@@ -121,7 +121,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     title: const Text('声音', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('放进背包、取出及拉链音效'),
-                    activeThumbColor: AppColors.primary,
                     value: _sound,
                     onChanged: (val) {
                       setState(() {
@@ -134,7 +133,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     title: const Text('震动', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('拖动、吸附及装包触感反馈'),
-                    activeThumbColor: AppColors.primary,
                     value: _haptic,
                     onChanged: (val) {
                       setState(() {
@@ -147,7 +145,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     title: const Text('减少动效', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('开启后所有动画改为简单淡入淡出'),
-                    activeThumbColor: AppColors.primary,
                     value: reducedMotion,
                     onChanged: (val) {
                       ref.read(reducedMotionProvider.notifier).setReducedMotion(val);
