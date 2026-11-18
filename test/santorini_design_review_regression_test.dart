@@ -196,7 +196,7 @@ void main() {
       }
     });
 
-    testWidgets('首页刊头大标题为 28sp w700 正字距 1.0', (tester) async {
+    testWidgets('首页刊头大标题采用专属展示字体 DaiqiDisplay 34sp 正字距 1.6', (tester) async {
       final h = Harness710(reducedMotion: true);
       addTearDown(() => h.dispose(tester));
       setView(tester, size: const Size(400, 850), top: 24);
@@ -208,9 +208,9 @@ void main() {
       final mastheadFinder = find.text('带齐了');
       expect(mastheadFinder, findsOneWidget);
       final Text mastheadText = tester.widget(mastheadFinder);
-      expect(mastheadText.style?.fontSize, 28);
-      expect(mastheadText.style?.fontWeight, FontWeight.w700);
-      expect(mastheadText.style?.letterSpacing, 1.0);
+      expect(mastheadText.style?.fontFamily, AppTheme.homeDisplayFontFamily);
+      expect(mastheadText.style?.fontSize, 34);
+      expect(mastheadText.style?.letterSpacing, 1.6);
     });
 
     testWidgets('首页 Hero 卡标题为 19sp w600 正字距 0.4', (tester) async {
