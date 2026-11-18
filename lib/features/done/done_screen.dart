@@ -76,13 +76,17 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
   /// Section 5.3: Departure action
   Future<void> _handleDepart() async {
     if (_isDeparting) return;
+    final reducedMotion =
+        ref.read(reducedMotionProvider) || MediaQuery.disableAnimationsOf(context);
     setState(() => _isDeparting = true);
 
     HapticService.lightImpact();
     AudioService.playDoor();
 
-    // Play closing door animation
-    await _doorAnimController.forward();
+    // Play closing door animation when reducedMotion is off
+    if (!reducedMotion) {
+      await _doorAnimController.forward();
+    }
 
     // Mark session departed
     await ref.read(packSessionRepositoryProvider).updateSessionStatus(
@@ -126,7 +130,8 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
 
   @override
   Widget build(BuildContext context) {
-    final reducedMotion = ref.watch(reducedMotionProvider);
+    final reducedMotion =
+        ref.watch(reducedMotionProvider) || MediaQuery.disableAnimationsOf(context);
 
     return PopScope(
       canPop: false,
@@ -148,38 +153,47 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                     return Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: 20,
-                        vertical: compact ? 6 : 16,
+                        vertical: compact ? 4 : 12,
                       ),
                       child: Column(
                         children: [
-                          // Top back button (white capsule with soft shadow)
+                          // Top back button (white capsule with >=48dp accessible hit target)
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: GestureDetector(
-                              onTap: _handleBackDeparture,
-                              child: Container(
-                                height: compact ? 32 : 38,
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
-                                decoration: BoxDecoration(
-                                  color: AppColors.card,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color.fromRGBO(28, 25, 23, 0.05),
-                                      blurRadius: 12,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                alignment: Alignment.centerLeft,
-                                width: 76,
-                                child: const Center(
-                                  child: Text(
-                                    '‹ 返回',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w600,
+                            child: Semantics(
+                              button: true,
+                              label: '返回',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: _handleBackDeparture,
+                                child: SizedBox(
+                                  height: compact ? 38 : 48,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Container(
+                                      height: compact ? 32 : 38,
+                                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.card,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color.fromRGBO(28, 25, 23, 0.05),
+                                            blurRadius: 12,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      width: 76,
+                                      alignment: Alignment.center,
+                                      child: const Text(
+                                        '‹ 返回',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -244,6 +258,7 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                       style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w500,
+                                        fontFeatures: [FontFeature.tabularFigures()],
                                         color: AppColors.textSecondary,
                                       ),
                                     ),
@@ -253,6 +268,7 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                         style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600,
+                                          fontFeatures: [FontFeature.tabularFigures()],
                                           color: AppColors.done,
                                         ),
                                       ),
@@ -266,7 +282,7 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                           // Departure Button: 出门 🚪 (Full capsule StadiumBorder, height: 54)
                           SizedBox(
                             width: double.infinity,
-                            height: 54,
+                            height: compact ? 48 : 54,
                             child: FilledButton(
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.primary,
@@ -276,39 +292,57 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                               child: const Text(
                                 '出门 🚪',
                                 style: TextStyle(
-                                  fontSize: 17,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.4,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
                           ),
-                          SizedBox(height: compact ? 6 : 14),
+                          SizedBox(height: compact ? 2 : 8),
 
-                          // Bottom link: 还是忘了东西？记一笔
-                          GestureDetector(
-                            onTap: _openRecordForgotSheet,
-                            child: const Padding(
-                              padding: EdgeInsets.all(6.0),
-                              child: Text.rich(
-                                TextSpan(
-                                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                                  children: [
-                                    TextSpan(text: '还是忘了东西？'),
-                                    TextSpan(
-                                      text: '记一笔',
-                                      style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w700,
-                                        decoration: TextDecoration.underline,
+                          // Bottom link: 还是忘了东西？记一笔 (>=48dp touch target in normal layout)
+                          Semantics(
+                            button: true,
+                            label: '还是忘了东西？记一笔',
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                HapticService.selection();
+                                _openRecordForgotSheet();
+                              },
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: compact ? 34 : 48,
+                                  minWidth: 160,
+                                ),
+                                child: const Center(
+                                  widthFactor: 1.0,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    child: Text.rich(
+                                      TextSpan(
+                                        style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                                        children: [
+                                          TextSpan(text: '还是忘了东西？'),
+                                          TextSpan(
+                                            text: '记一笔',
+                                            style: TextStyle(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w700,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                          SizedBox(height: compact ? 2 : 12),
+                          SizedBox(height: compact ? 0 : 6),
                         ],
                       ),
                     );

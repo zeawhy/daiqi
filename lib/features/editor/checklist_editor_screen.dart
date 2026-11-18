@@ -330,7 +330,12 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
     }
 
     if (mounted) {
-      context.pop();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/');
+      }
     }
   }
 
