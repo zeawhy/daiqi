@@ -120,78 +120,86 @@ class _AnimatedNavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 280),
-        curve: reducedMotion ? Curves.linear : Curves.easeOutBack,
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TweenAnimationBuilder<double>(
-              key: ValueKey<bool>(isSelected),
-              tween: Tween<double>(
-                begin: (!reducedMotion && isSelected) ? 0.75 : 1.0,
-                end: 1.0,
-              ),
-              duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 360),
-              curve: reducedMotion ? Curves.linear : Curves.elasticOut,
-              builder: (context, scale, child) {
-                return Transform.scale(
-                  scale: reducedMotion ? 1.0 : scale,
-                  child: child,
-                );
-              },
-              child: Icon(
-                isSelected ? config.selectedIcon : config.icon,
-                size: 21,
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-              ),
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: config.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: double.infinity,
+          child: AnimatedContainer(
+            duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 280),
+            curve: reducedMotion ? Curves.linear : Curves.easeOutBack,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(22),
             ),
-            if (reducedMotion)
-              isSelected
-                  ? Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: Text(
-                        config.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
-                  : const SizedBox.shrink()
-            else
-              AnimatedSize(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                child: isSelected
-                    ? Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text(
-                          config.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TweenAnimationBuilder<double>(
+                  key: ValueKey<bool>(isSelected),
+                  tween: Tween<double>(
+                    begin: (!reducedMotion && isSelected) ? 0.75 : 1.0,
+                    end: 1.0,
+                  ),
+                  duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 360),
+                  curve: reducedMotion ? Curves.linear : Curves.elasticOut,
+                  builder: (context, scale, child) {
+                    return Transform.scale(
+                      scale: reducedMotion ? 1.0 : scale,
+                      child: child,
+                    );
+                  },
+                  child: Icon(
+                    isSelected ? config.selectedIcon : config.icon,
+                    size: 21,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                  ),
+                ),
+                if (reducedMotion)
+                  isSelected
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            config.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-          ],
+                        )
+                      : const SizedBox.shrink()
+                else
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    child: isSelected
+                        ? Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Text(
+                              config.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

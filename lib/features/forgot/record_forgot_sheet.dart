@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../data/database.dart';
+import '../../shared/constants/emoji_presets.dart';
+import '../../shared/services/haptic_service.dart';
+import '../../shared/widgets/brand_backpack_icon.dart';
 
 class RecordForgotSheet extends ConsumerStatefulWidget {
   final String? sessionId;
@@ -42,14 +45,32 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
     super.initState();
     _sessionId = widget.sessionId;
     _listId = widget.listId;
+    _customController.addListener(_onCustomTextChanged);
     _initData();
+  }
+
+  void _onCustomTextChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _customController.removeListener(_onCustomTextChanged);
     _customController.dispose();
     super.dispose();
   }
+
+  bool get _hasPendingCustomText => _customController.text.trim().isNotEmpty;
+
+  bool get _hasOutsideItems {
+    if (_customItems.isNotEmpty) return true;
+    final pending = _customController.text.trim();
+    if (pending.isEmpty) return false;
+    return !_checklistItems.any((i) => i.name.trim() == pending);
+  }
+
+  bool get _canSubmit =>
+      !_isSaving && (_selectedItems.isNotEmpty || _hasPendingCustomText);
 
   Future<void> _initData() async {
     final checklistRepo = ref.read(checklistRepositoryProvider);
@@ -72,6 +93,10 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
     }
 
     if (_listId != null) {
+      if (_listName == null) {
+        final checklist = await checklistRepo.getChecklist(_listId!);
+        _listName = checklist?.name;
+      }
       _checklistItems = await checklistRepo.getItemsForChecklist(_listId!);
     }
 
@@ -99,6 +124,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
   void _addCustomItem() {
     final text = _customController.text.trim();
     if (text.isEmpty) return;
+    HapticService.lightImpact();
     if (_checklistItems.any((i) => i.name == text) || _customItems.contains(text)) {
       _selectedItems.add(text);
       _customController.clear();
@@ -112,8 +138,51 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
     });
   }
 
+  Widget _buildChipLabel(String emoji, String name, bool isSelected) {
+    if (emoji == '🎒') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ChecklistAvatar(
+            emoji: emoji,
+            size: 16,
+            strokeWidth: 1.5,
+            strokeColor: isSelected ? Colors.white : AppColors.primary,
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+    return Text(
+      '$emoji $name',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   Future<void> _save() async {
-    if (_selectedItems.isEmpty || _isSaving) return;
+    if (_isSaving) return;
+
+    // Auto-commit pending typed outside item if user didn't tap '+'
+    final pending = _customController.text.trim();
+    if (pending.isNotEmpty) {
+      if (!_checklistItems.any((i) => i.name.trim() == pending) &&
+          !_customItems.contains(pending)) {
+        _customItems.add(pending);
+      }
+      _selectedItems.add(pending);
+      _customController.clear();
+    }
+
+    if (_selectedItems.isEmpty) return;
+    HapticService.mediumImpact();
     setState(() => _isSaving = true);
 
     final checklistRepo = ref.read(checklistRepositoryProvider);
@@ -125,14 +194,17 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
     );
 
     if (mounted) {
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.of(context).pop();
       widget.onRecorded?.call();
 
-      final summary = recorded.join('、');
-      ScaffoldMessenger.of(context).showSnackBar(
+      final summary = recorded.length <= 4
+          ? recorded.join('、')
+          : '${recorded.take(4).join('、')} 等';
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
         SnackBar(
           content: Text('已记下，下次 $summary 会排在最前面'),
-          backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -141,18 +213,18 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        left: 22,
-        right: 22,
-        top: 12,
-      ),
-      child: _isLoading
+    return Material(
+      color: AppColors.card,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 22,
+          right: 22,
+          top: 12,
+        ),
+        child: _isLoading
           ? const SizedBox(
               height: 200,
               child: Center(child: CircularProgressIndicator()),
@@ -190,7 +262,8 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                        tooltip: '关闭',
+                        icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -198,9 +271,12 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                   // Subtitle
                   Text(
                     _buildSubtitle(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
+                      fontFeatures: [FontFeature.tabularFigures()],
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -215,7 +291,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                         ..._checklistItems.map((item) {
                           final isSelected = _selectedItems.contains(item.name);
                           return FilterChip(
-                            label: Text('${item.emoji} ${item.name}'),
+                            label: _buildChipLabel(item.emoji, item.name, isSelected),
                             selected: isSelected,
                             selectedColor: AppColors.primary,
                             backgroundColor: AppColors.background,
@@ -232,6 +308,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             onSelected: (val) {
+                              HapticService.selection();
                               setState(() {
                                 if (val) {
                                   _selectedItems.add(item.name);
@@ -244,8 +321,9 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                         }),
                         ..._customItems.map((name) {
                           final isSelected = _selectedItems.contains(name);
+                          final matchedEmoji = EmojiPresets.matchEmoji(name);
                           return FilterChip(
-                            label: Text('📦 $name'),
+                            label: _buildChipLabel(matchedEmoji, name, isSelected),
                             selected: isSelected,
                             selectedColor: AppColors.primary,
                             backgroundColor: AppColors.background,
@@ -262,6 +340,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             onSelected: (val) {
+                              HapticService.selection();
                               setState(() {
                                 if (val) {
                                   _selectedItems.add(name);
@@ -282,6 +361,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       Expanded(
                         child: TextField(
                           controller: _customController,
+                          textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
                             hintText: '＋ 清单外的物品',
                             hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
@@ -302,18 +382,20 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       ),
                       const SizedBox(width: 8),
                       IconButton.filled(
+                        tooltip: '添加物品',
                         style: IconButton.styleFrom(
                           backgroundColor: AppColors.primary,
+                          minimumSize: const Size(48, 48),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                        icon: const Icon(Icons.add, color: Colors.white),
+                        icon: const Icon(Icons.add_rounded, color: Colors.white),
                         onPressed: _addCustomItem,
                       ),
                     ],
                   ),
 
                   // Option to add outside items to checklist
-                  if (_listId != null && _customItems.isNotEmpty)
+                  if (_listId != null && _hasOutsideItems)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: CheckboxListTile(
@@ -321,11 +403,14 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                         controlAffinity: ListTileControlAffinity.leading,
                         title: Text(
                           '将清单外的物品加入「$_listName」',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         ),
                         activeColor: AppColors.primary,
                         value: _addToChecklist,
                         onChanged: (val) {
+                          HapticService.selection();
                           setState(() {
                             _addToChecklist = val ?? false;
                           });
@@ -344,7 +429,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                         disabledBackgroundColor: AppColors.border,
                         shape: const StadiumBorder(),
                       ),
-                      onPressed: _selectedItems.isEmpty || _isSaving ? null : _save,
+                      onPressed: _canSubmit ? _save : null,
                       child: _isSaving
                           ? const SizedBox(
                               width: 20,
@@ -367,6 +452,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                 ],
               ),
             ),
+      ),
     );
   }
 }

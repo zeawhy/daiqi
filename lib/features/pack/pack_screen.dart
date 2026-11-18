@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../../domain/models/pack_models.dart';
 import '../../shared/constants/emoji_presets.dart';
 import '../../shared/services/audio_service.dart';
 import '../../shared/services/haptic_service.dart';
+import '../../shared/widgets/brand_backpack_icon.dart';
 import 'backpack_widget.dart';
 import 'item_card_widget.dart';
 import 'mnemonic_bar.dart';
@@ -524,63 +526,121 @@ class _PackScreenState extends ConsumerState<PackScreen>
     // 8pt tap slop), a long press must not open the menu.
     if (_draggingItem != null || _flyingItem != null || _pointerMovedBeyondTapSlop) return;
     _longPressFired = true;
+    HapticService.mediumImpact();
     showModalBottomSheet(
       context: context,
-      builder: (context) {
+      builder: (sheetContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Text(item.emoji, style: const TextStyle(fontSize: 24)),
-                title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: Icon(
-                  item.isSkipped ? Icons.replay : Icons.block,
-                  color: AppColors.primary,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                title: Text(item.isSkipped ? '恢复带上' : '今天不带'),
-                subtitle: Text(
-                  item.isSkipped ? '恢复计入本次装包清单' : '本次出门跳过此物品，不计入总数',
-                  style: const TextStyle(fontSize: 12),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryLight,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: ChecklistAvatar(
+                      emoji: item.emoji,
+                      size: 22,
+                      strokeWidth: 1.8,
+                      strokeColor: AppColors.primary,
+                    ),
+                  ),
+                  title: Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
-                onTap: () async {
-                  context.pop();
-                  if (_session != null) {
-                    await ref
-                        .read(packSessionRepositoryProvider)
-                        .toggleSkipped(_session!.id, item.listItemId);
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('编辑清单'),
-                onTap: () {
-                  context.pop();
-                  _openEditor();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.danger),
-                title: const Text('从清单删除', style: TextStyle(color: AppColors.danger)),
-                onTap: () async {
-                  context.pop();
-                  _deleteItemFromChecklist(item);
-                },
-              ),
-            ],
+                const Divider(height: 8),
+                ListTile(
+                  leading: Icon(
+                    item.isSkipped ? Icons.replay_rounded : Icons.block_rounded,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    item.isSkipped ? '恢复带上' : '今天不带',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    item.isSkipped ? '恢复计入本次装包清单' : '本次出门跳过此物品，不计入总数',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    HapticService.selection();
+                    if (_session != null) {
+                      await ref
+                          .read(packSessionRepositoryProvider)
+                          .toggleSkipped(_session!.id, item.listItemId);
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('编辑清单'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openEditor();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+                  title: const Text(
+                    '从清单删除',
+                    style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w500),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _deleteItemFromChecklist(item);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
+  List<int>? _parseChecklistWeekdays(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw) as List;
+      return decoded.map((e) => e as int).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _deleteItemFromChecklist(PackItemModel item) async {
+    if (_checklist == null) return;
     final checklistRepo = ref.read(checklistRepositoryProvider);
     final items = await checklistRepo.getItemsForChecklist(widget.checklistId);
+    final removedIndex = items.indexWhere((i) => i.id == item.listItemId);
+    if (removedIndex == -1) return;
+    final removedItem = items[removedIndex];
     final remaining = items.where((i) => i.id != item.listItemId).toList();
 
     await checklistRepo.updateChecklist(
@@ -590,7 +650,63 @@ class _PackScreenState extends ConsumerState<PackScreen>
       mnemonic: _checklist!.mnemonic,
       reminderEnabled: _checklist!.reminderEnabled,
       reminderTime: _checklist!.reminderTime,
+      reminderWeekdays: _parseChecklistWeekdays(_checklist!.reminderWeekdays),
       items: remaining.map((i) => (name: i.name, emoji: i.emoji)).toList(),
+    );
+
+    HapticService.lightImpact();
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('已从清单移除「${removedItem.name}」'),
+        action: SnackBarAction(
+          label: '撤销',
+          textColor: AppColors.pastelAmber,
+          onPressed: () async {
+            final current = await checklistRepo.getItemsForChecklist(widget.checklistId);
+            if (current.any((i) => i.name.trim() == removedItem.name.trim())) return;
+            final restored = current.map((i) => (name: i.name, emoji: i.emoji)).toList();
+            final insertAt = removedIndex.clamp(0, restored.length);
+            restored.insert(insertAt, (name: removedItem.name, emoji: removedItem.emoji));
+            await checklistRepo.updateChecklist(
+              listId: widget.checklistId,
+              name: _checklist!.name,
+              emoji: _checklist!.emoji,
+              mnemonic: _checklist!.mnemonic,
+              reminderEnabled: _checklist!.reminderEnabled,
+              reminderTime: _checklist!.reminderTime,
+              reminderWeekdays: _parseChecklistWeekdays(_checklist!.reminderWeekdays),
+              items: restored,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addQuickItemToCurrentChecklist(String name) async {
+    if (_checklist == null) return;
+    HapticService.lightImpact();
+    final checklistRepo = ref.read(checklistRepositoryProvider);
+    final existing = await checklistRepo.getItemsForChecklist(widget.checklistId);
+    if (existing.any((i) => i.name.trim() == name.trim())) return;
+
+    final updatedItems = [
+      ...existing.map((i) => (name: i.name, emoji: i.emoji)),
+      (name: name, emoji: EmojiPresets.matchEmoji(name)),
+    ];
+
+    await checklistRepo.updateChecklist(
+      listId: widget.checklistId,
+      name: _checklist!.name,
+      emoji: _checklist!.emoji,
+      mnemonic: _checklist!.mnemonic,
+      reminderEnabled: _checklist!.reminderEnabled,
+      reminderTime: _checklist!.reminderTime,
+      reminderWeekdays: _parseChecklistWeekdays(_checklist!.reminderWeekdays),
+      items: updatedItems,
     );
   }
 
@@ -623,14 +739,21 @@ class _PackScreenState extends ConsumerState<PackScreen>
     }
 
     // Unpacked items exist: show departure dialog
-    final names = unpackedItems.map((i) => i.name).join('、');
+    final previewNames = unpackedItems.length <= 4
+        ? unpackedItems.map((i) => i.name).join('、')
+        : '${unpackedItems.take(4).map((i) => i.name).join('、')} 等';
     showDialog(
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
           title: Text(
-            '还有 ${unpackedItems.length} 件没装：$names',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            '还有 ${unpackedItems.length} 件没装：$previewNames',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+              height: 1.35,
+            ),
           ),
           content: const Text('确定就这样出门吗？'),
           actions: [
@@ -681,7 +804,40 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
     return itemsAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '加载装包清单失败，请返回重试',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/');
+                      }
+                    },
+                    child: const Text('返回'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
       data: (items) {
         final activeItems = items.where((i) => !i.isSkipped).toList();
         final allSkipped = items.isNotEmpty && activeItems.isEmpty;
@@ -762,7 +918,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                                 },
                                 child: const Text(
                                   '直接出门',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ],
@@ -896,44 +1052,56 @@ class _PackScreenState extends ConsumerState<PackScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () => _handleBackPress(items),
-                child: Container(
-                  height: pillHeight,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: pillShadow,
-                  ),
-                  child: const Text(
-                    '‹ 返回',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
+              Semantics(
+                button: true,
+                label: '返回',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _handleBackPress(items),
+                  child: Container(
+                    height: pillHeight,
+                    constraints: const BoxConstraints(minWidth: 72),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: pillShadow,
+                    ),
+                    child: const Text(
+                      '‹ 返回',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
               ),
-              GestureDetector(
-                onTap: _openEditor,
-                child: Container(
-                  height: pillHeight,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: pillShadow,
-                  ),
-                  child: const Text(
-                    '编辑',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
+              Semantics(
+                button: true,
+                label: '编辑清单',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _openEditor,
+                  child: Container(
+                    height: pillHeight,
+                    constraints: const BoxConstraints(minWidth: 68),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: pillShadow,
+                    ),
+                    child: const Text(
+                      '编辑',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -943,6 +1111,8 @@ class _PackScreenState extends ConsumerState<PackScreen>
           const SizedBox(height: 4),
           Text(
             _checklist!.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: compactMode ? 19 : 23,
               fontWeight: FontWeight.w600,
@@ -1102,39 +1272,78 @@ class _PackScreenState extends ConsumerState<PackScreen>
   Widget _buildEmptyState() {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              '先往清单里加点东西',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(28, 25, 23, 0.04),
+                blurRadius: 20,
+                offset: Offset(0, 6),
               ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: EmojiPresets.commonShortcuts.take(6).map((name) {
-                return ActionChip(
-                  label: Text('$name ${EmojiPresets.matchEmoji(name)}'),
-                  onPressed: () async {
-                    final checklistRepo = ref.read(checklistRepositoryProvider);
-                    await checklistRepo.createChecklist(
-                      name: _checklist!.name,
-                      emoji: _checklist!.emoji,
-                      items: [(name: name, emoji: EmojiPresets.matchEmoji(name))],
-                    );
-                    _initSession();
-                  },
-                );
-              }).toList(),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const BrandBackpackIcon(
+                  size: 26,
+                  strokeWidth: 2.0,
+                  strokeColor: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '先往清单里加点东西',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '点下方常用物品一键加入当前清单',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: EmojiPresets.commonShortcuts.take(6).map((name) {
+                  return ActionChip(
+                    backgroundColor: AppColors.background,
+                    side: const BorderSide(color: AppColors.border, width: 0.6),
+                    label: Text('$name ${EmojiPresets.matchEmoji(name)}'),
+                    onPressed: () => _addQuickItemToCurrentChecklist(name),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _openEditor,
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('编辑更多物品'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1196,7 +1405,9 @@ class _PackScreenState extends ConsumerState<PackScreen>
                 : (isAllPacked ? '全部装好了 🎉' : '$packedCount / $totalCount'),
             style: TextStyle(
               fontSize: textSize,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+              fontFeatures: const [FontFeature.tabularFigures()],
               color: _isHoveringDropZone
                   ? AppColors.primary
                   : (isAllPacked ? AppColors.done : AppColors.textSecondary),

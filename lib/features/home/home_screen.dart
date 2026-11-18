@@ -176,7 +176,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           SafeArea(
             child: checklistsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('加载失败: $e')),
+          error: (e, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color.fromRGBO(28, 25, 23, 0.05),
+                      blurRadius: 20,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '加载清单失败，请重试',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                      onPressed: () {
+                        HapticService.selection();
+                        ref.invalidate(allChecklistsStreamProvider);
+                      },
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('重试'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           data: (checklists) {
             final now = DateTime.now();
             final heroList = HomeScreen.selectHeroChecklist(checklists, now);
@@ -271,35 +312,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         // Floating animated mini-backpack in header (wrapped in RepaintBoundary)
                         RepaintBoundary(
-                          child: AnimatedBuilder(
-                            animation: _floatController,
-                            builder: (context, child) {
-                              final dy = reducedMotion
-                                  ? 0.0
-                                  : sin(_floatController.value * pi) * 4.0;
-                              return Transform.translate(
-                                offset: Offset(0, -dy),
-                                child: child,
-                              );
-                            },
-                            child: Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: AppColors.card,
-                                borderRadius: BorderRadius.circular(18),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color.fromRGBO(28, 25, 23, 0.05),
-                                    blurRadius: 18,
-                                    offset: Offset(0, 6),
+                          child: Semantics(
+                            button: heroList != null,
+                            label: heroList != null
+                                ? '打开当前清单 ${heroList.name}'
+                                : '背包状态',
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: heroList == null
+                                  ? null
+                                  : () {
+                                      HapticService.lightImpact();
+                                      context.push('/pack/${heroList.id}');
+                                    },
+                              child: AnimatedBuilder(
+                                animation: _floatController,
+                                builder: (context, child) {
+                                  final dy = reducedMotion
+                                      ? 0.0
+                                      : sin(_floatController.value * pi) * 4.0;
+                                  return Transform.translate(
+                                    offset: Offset(0, -dy),
+                                    child: child,
+                                  );
+                                },
+                                child: Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.card,
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color.fromRGBO(28, 25, 23, 0.05),
+                                        blurRadius: 18,
+                                        offset: Offset(0, 6),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: MiniBackpack(
-                                progress: heroList?.progress ?? 0.0,
-                                size: 32,
+                                  alignment: Alignment.center,
+                                  child: MiniBackpack(
+                                    progress: heroList?.progress ?? 0.0,
+                                    size: 32,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -599,26 +655,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         Wrap(
                           spacing: 6,
                           runSpacing: 4,
-                          children: items.take(4).map((name) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 3.5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.background,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                name,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
+                          children: [
+                            ...items.take(4).map((name) {
+                              return ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 112),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 3.5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                            if (items.length > 4)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '+${items.length - 4}',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: [FontFeature.tabularFigures()],
+                                  ),
                                 ),
                               ),
-                            );
-                          }).toList(),
+                          ],
                         ),
                       ],
                     ),
@@ -951,6 +1034,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _showCardMenu(ChecklistSummaryModel item) {
     HapticService.mediumImpact();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     showModalBottomSheet(
       context: context,
       builder: (sheetContext) {
@@ -970,14 +1054,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
                 ListTile(
-                  leading: ChecklistAvatar(
-                    emoji: item.emoji,
-                    size: 28,
-                    strokeWidth: 2.2,
-                    strokeColor: AppColors.primary,
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryLight,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: ChecklistAvatar(
+                      emoji: item.emoji,
+                      size: 22,
+                      strokeWidth: 2.0,
+                      strokeColor: AppColors.primary,
+                    ),
                   ),
                   title: Text(
                     item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
@@ -986,7 +1081,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  subtitle: Text('共 ${item.totalCount} 件物品'),
+                  subtitle: Text(
+                    '共 ${item.totalCount} 件物品',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
                 ),
                 const Divider(height: 12),
                 ListTile(
@@ -996,10 +1098,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   title: const Text(
                     '立即开始装包',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
+                    HapticService.lightImpact();
                     context.push('/pack/${item.id}');
                   },
                 ),
@@ -1016,13 +1119,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   title: const Text('复制'),
                   onTap: () async {
                     Navigator.pop(sheetContext);
+                    HapticService.lightImpact();
                     final repo = ref.read(checklistRepositoryProvider);
                     await repo.duplicateChecklist(item.id);
+                    if (!mounted) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(
+                      SnackBar(content: Text('已复制「${item.name}」')),
+                    );
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.delete_outline, color: AppColors.danger),
-                  title: const Text('删除', style: TextStyle(color: AppColors.danger)),
+                  title: const Text(
+                    '删除',
+                    style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w500),
+                  ),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _confirmDelete(item);
@@ -1041,19 +1154,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
-          title: const Text('删除清单', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            '删除清单',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
           content: Text('确定要删除「${item.name}」吗？清单内物品和记录将被移除。'),
           actions: [
             TextButton(
-              onPressed: () => dialogCtx.pop(),
+              onPressed: () => Navigator.of(dialogCtx).pop(),
               child: const Text('取消', style: TextStyle(color: AppColors.textSecondary)),
             ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: () async {
-                dialogCtx.pop();
+                Navigator.of(dialogCtx).pop();
+                HapticService.lightImpact();
                 final repo = ref.read(checklistRepositoryProvider);
                 await repo.deleteChecklist(item.id);
+                if (!mounted) return;
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.hideCurrentSnackBar();
+                messenger.showSnackBar(
+                  SnackBar(content: Text('已删除「${item.name}」')),
+                );
               },
               child: const Text('删除'),
             ),

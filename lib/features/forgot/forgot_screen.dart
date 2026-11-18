@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../data/database.dart';
+import '../../shared/services/haptic_service.dart';
+import '../../shared/widgets/brand_backpack_icon.dart';
 import '../../shared/widgets/mini_backpack.dart';
 import 'record_forgot_sheet.dart';
 
@@ -52,6 +54,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
   }
 
   void _openRecordSheet() {
+    HapticService.lightImpact();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -63,12 +66,15 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
   }
 
   Future<void> _deleteRecord(String recordId) async {
+    HapticService.lightImpact();
     final checklistRepo = ref.read(checklistRepositoryProvider);
     await checklistRepo.deleteForgotRecord(recordId);
     await _loadData();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('已删除该遗忘记录'),
           behavior: SnackBarBehavior.floating,
@@ -90,6 +96,11 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep stats, ranking, and timeline synced across IndexedStack tab switches
+    ref.listen(allChecklistsStreamProvider, (_, _) {
+      _loadData();
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -139,11 +150,12 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 44),
                                 shape: const StadiumBorder(),
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               ),
                               onPressed: _openRecordSheet,
-                              icon: const Icon(Icons.edit_note, size: 20),
+                              icon: const Icon(Icons.edit_note_rounded, size: 20),
                               label: const Text(
                                 '记一笔',
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
@@ -229,8 +241,10 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                             child: const Text(
                               '最常忘的东西',
                               style: TextStyle(
-                                fontSize: 17,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                                height: 1.35,
                                 color: AppColors.textPrimary,
                               ),
                             ),
@@ -269,13 +283,28 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                          child: const Text(
-                            '最近记录',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: const [
+                              Text(
+                                '最近记录',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                  height: 1.35,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                '左滑可删除',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -300,7 +329,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                     color: AppColors.danger,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Icon(Icons.delete, color: Colors.white),
+                                  child: const Icon(Icons.delete_outline, color: Colors.white),
                                 ),
                                 onDismissed: (_) => _deleteRecord(item.record.id),
                                 child: Container(
@@ -326,9 +355,11 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                           shape: BoxShape.circle,
                                         ),
                                         alignment: Alignment.center,
-                                        child: Text(
-                                          item.itemEmoji,
-                                          style: const TextStyle(fontSize: 22),
+                                        child: ChecklistAvatar(
+                                          emoji: item.itemEmoji,
+                                          size: 22,
+                                          strokeWidth: 1.8,
+                                          strokeColor: AppColors.primary,
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -338,6 +369,8 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                           children: [
                                             Text(
                                               '忘了 ${item.itemName}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w600,
@@ -347,9 +380,12 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                             const SizedBox(height: 2),
                                             Text(
                                               '$timeStr · $listName',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w500,
+                                                fontFeatures: [FontFeature.tabularFigures()],
                                                 color: AppColors.textSecondary,
                                               ),
                                             ),
@@ -419,20 +455,24 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
               '$rank',
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
                 color: rank <= 3 ? AppColors.danger : AppColors.textSecondary,
               ),
             ),
           ),
-          Text(
-            data.item.emoji,
-            style: const TextStyle(fontSize: 20),
+          ChecklistAvatar(
+            emoji: data.item.emoji,
+            size: 20,
+            strokeWidth: 1.8,
+            strokeColor: AppColors.primary,
           ),
           const SizedBox(width: 8),
           // Name + High risk indicator
-          SizedBox(
-            width: 72,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 72, maxWidth: 104),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Flexible(
                   child: Text(
@@ -495,6 +535,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
+              fontFeatures: [FontFeature.tabularFigures()],
               color: AppColors.textSecondary,
             ),
           ),

@@ -31,6 +31,7 @@ class OnboardingService {
   }
 
   static Future<void> markCompleted() async {
+    if (_completedMemory) return;
     _completedMemory = true;
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -122,12 +123,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     });
   }
 
-  Future<void> _finishOnboarding() async {
+  Future<void> _finishOnboarding({bool skipPermission = false}) async {
     if (_isFinishing) return;
     _isFinishing = true;
 
-    // Request notification permission (Section 5.8: 可以跳过)
-    await NotificationService.requestPermission();
+    final wasCompleted = await OnboardingService.isCompleted();
+    // Request notification permission only on initial completion (Section 5.8: 可以跳过)
+    if (!skipPermission && !wasCompleted) {
+      await NotificationService.requestPermission();
+    }
     await OnboardingService.markCompleted();
 
     if (mounted) {
@@ -154,130 +158,211 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            children: [
-              // Header title
-              const SizedBox(height: 12),
-              const Text(
-                '带齐了',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _isDone ? '就是这样！出门前把东西都装进包里' : '试试把钥匙拖进包里',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: _isDone ? AppColors.done : AppColors.primary,
-                ),
-              ),
-              const Spacer(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 620;
+            final fingerScale = compact ? 0.35 : 1.0;
 
-              // Item card & Finger drag path
-              if (!_isPacked) ...[
-                Draggable<String>(
-                  data: 'key',
-                  feedback: Material(
-                    color: Colors.transparent,
-                    child: SizedBox(
-                      width: 110,
-                      height: 86,
-                      child: ItemCardWidget(
-                        item: _keyItem,
-                        isDragged: true,
+            return Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: compact ? 8 : 16,
+              ),
+              child: Column(
+                children: [
+                  // Top action bar: Skip button
+                  SizedBox(
+                    height: compact ? 36 : 44,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: !_isDone
+                          ? Semantics(
+                              button: true,
+                              label: '跳过引导',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  HapticService.selection();
+                                  _finishOnboarding(skipPermission: true);
+                                },
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 64,
+                                    minHeight: 36,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.card,
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color.fromRGBO(28, 25, 23, 0.05),
+                                        blurRadius: 12,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Text(
+                                    '跳过',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+
+                  // Header title (Santorini L1: 28sp w700 tracking 1.0)
+                  SizedBox(height: compact ? 2 : 6),
+                  const Text(
+                    '带齐了',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                      height: 1.20,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _isDone ? '就是这样！出门前把东西都装进包里' : '试试把钥匙拖进包里',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                      color: _isDone ? AppColors.done : AppColors.primary,
+                    ),
+                  ),
+                  if (!_isPacked) ...[
+                    const SizedBox(height: 4),
+                    const Text(
+                      '也可以直接轻点卡片装包',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                  ),
-                  childWhenDragging: const SizedBox(
-                    width: 110,
-                    height: 86,
-                    child: ItemCardWidget(
-                      item: _keyItem,
-                      isPlaceholder: true,
-                    ),
-                  ),
-                  child: GestureDetector(
-                    onTap: _onPackItem,
-                    child: SizedBox(
-                      width: 110,
-                      height: 86,
-                      child: const ItemCardWidget(item: _keyItem),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
+                  ],
+                  const Spacer(),
 
-                // Animated finger guide
-                if (!reducedMotion)
-                  AnimatedBuilder(
-                    animation: _fingerYAnimation,
-                    builder: (context, _) {
-                      return Transform.translate(
-                        offset: Offset(0, _fingerYAnimation.value),
-                        child: const Icon(
-                          Icons.touch_app,
-                          size: 34,
-                          color: AppColors.primary,
+                  // Item card & Finger drag path
+                  if (!_isPacked) ...[
+                    Draggable<String>(
+                      data: 'key',
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: SizedBox(
+                          width: 110,
+                          height: 86,
+                          child: ItemCardWidget(
+                            item: _keyItem,
+                            isDragged: true,
+                          ),
                         ),
+                      ),
+                      childWhenDragging: const SizedBox(
+                        width: 110,
+                        height: 86,
+                        child: ItemCardWidget(
+                          item: _keyItem,
+                          isPlaceholder: true,
+                        ),
+                      ),
+                      child: GestureDetector(
+                        onTap: _onPackItem,
+                        child: const SizedBox(
+                          width: 110,
+                          height: 86,
+                          child: ItemCardWidget(item: _keyItem),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: compact ? 6 : 12),
+
+                    // Animated finger guide (or static arrow in reducedMotion)
+                    if (!reducedMotion)
+                      AnimatedBuilder(
+                        animation: _fingerYAnimation,
+                        builder: (context, _) {
+                          return Transform.translate(
+                            offset: Offset(0, _fingerYAnimation.value * fingerScale),
+                            child: const Icon(
+                              Icons.touch_app_rounded,
+                              size: 34,
+                              color: AppColors.primary,
+                            ),
+                          );
+                        },
+                      )
+                    else
+                      const Icon(
+                        Icons.south_rounded,
+                        size: 28,
+                        color: AppColors.textSecondary,
+                      ),
+                  ],
+
+                  const Spacer(),
+
+                  // Backpack area (Drag Target)
+                  DragTarget<String>(
+                    key: _backpackContainerKey,
+                    onAcceptWithDetails: (_) => _onPackItem(),
+                    builder: (context, candidateData, rejectedData) {
+                      return BackpackWidget(
+                        key: _backpackKey,
+                        progress: _isPacked ? 1.0 : 0.0,
+                        isOpen: candidateData.isNotEmpty,
+                        isDone: _isDone,
+                        reducedMotion: reducedMotion,
+                        width: compact ? 130 : 200,
+                        height: compact ? 156 : 240,
                       );
                     },
                   ),
-              ],
+                  const Spacer(),
 
-              const Spacer(),
-
-              // Backpack area (Drag Target)
-              DragTarget<String>(
-                key: _backpackContainerKey,
-                onAcceptWithDetails: (_) => _onPackItem(),
-                builder: (context, candidateData, rejectedData) {
-                  return BackpackWidget(
-                    key: _backpackKey,
-                    progress: _isPacked ? 1.0 : 0.0,
-                    isOpen: candidateData.isNotEmpty,
-                    isDone: _isDone,
-                    reducedMotion: reducedMotion,
-                    width: 200,
-                    height: 240,
-                  );
-                },
+                  // "开始使用" button (appears when packed & done)
+                  if (_isDone) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: compact ? 48 : 54,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.done,
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: _finishOnboarding,
+                        child: const Text(
+                          '开始使用',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: compact ? 4 : 12),
+                  ] else
+                    SizedBox(height: compact ? 16 : 62),
+                ],
               ),
-              const Spacer(),
-
-              // "开始使用" button (appears when packed & done)
-              if (_isDone) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.done,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: _finishOnboarding,
-                    child: const Text(
-                      '开始使用',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ] else
-                const SizedBox(height: 64),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

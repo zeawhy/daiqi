@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 import '../../domain/models/pack_models.dart';
+import '../../shared/widgets/brand_backpack_icon.dart';
 import '../../shared/widgets/dashed_border.dart';
 
 class ItemCardWidget extends StatelessWidget {
@@ -244,9 +245,11 @@ class ItemCardWidget extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Text(
-                item.emoji,
-                style: const TextStyle(fontSize: 22),
+              child: ChecklistAvatar(
+                emoji: item.emoji,
+                size: 22,
+                strokeWidth: 1.8,
+                strokeColor: isPacked ? AppColors.done : AppColors.primary,
               ),
             ),
           ),

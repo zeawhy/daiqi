@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../shared/constants/emoji_presets.dart';
+import '../../shared/services/haptic_service.dart';
 import '../../shared/services/notification_service.dart';
 import '../../shared/widgets/brand_backpack_icon.dart';
 
@@ -33,6 +35,8 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
   List<({String name, String emoji})> _items = [];
   bool _isAutoMnemonic = true;
   bool _isLoading = true;
+  bool _isSaving = false;
+  String _initialSnapshot = '';
 
   final List<String> _emojiPickerOptions = [
     '🎒', '💼', '👜', '🧳', '🤚', '🏃', '✈️', '🏕️', '💻', '🏋️', '🚴', '🚗',
@@ -41,8 +45,33 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _nameController.addListener(_onTextChanged);
+    _itemInputController.addListener(_onTextChanged);
+    _mnemonicController.addListener(_onTextChanged);
     _loadData();
   }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _computeSnapshot() {
+    final sortedDays = [..._reminderWeekdays]..sort();
+    return jsonEncode({
+      'name': _nameController.text.trim(),
+      'pendingItem': _itemInputController.text.trim(),
+      'emoji': _selectedEmoji,
+      'mnemonicEnabled': _mnemonicEnabled,
+      'mnemonic': _mnemonicEnabled ? _mnemonicController.text.trim() : '',
+      'reminderEnabled': _reminderEnabled,
+      'reminderTime': '${_reminderTime.hour}:${_reminderTime.minute}',
+      'weekdays': sortedDays,
+      'items': _items.map((e) => '${e.name}:${e.emoji}').toList(),
+    });
+  }
+
+  bool get _hasUnsavedChanges =>
+      !_isLoading && !_isSaving && _computeSnapshot() != _initialSnapshot;
 
   Future<void> _loadData() async {
     if (widget.checklistId != null) {
@@ -68,16 +97,34 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
             );
           }
         }
+        if (checklist.reminderWeekdays != null && checklist.reminderWeekdays!.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(checklist.reminderWeekdays!) as List;
+            final days = decoded.map((e) => e as int).where((d) => d >= 1 && d <= 7).toList()
+              ..sort();
+            if (days.isNotEmpty) {
+              _reminderWeekdays
+                ..clear()
+                ..addAll(days);
+            }
+          } catch (_) {}
+        }
         _items = items.map((i) => (name: i.name, emoji: i.emoji)).toList();
       }
     }
-    setState(() {
-      _isLoading = false;
-    });
+    _initialSnapshot = _computeSnapshot();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_onTextChanged);
+    _itemInputController.removeListener(_onTextChanged);
+    _mnemonicController.removeListener(_onTextChanged);
     _nameController.dispose();
     _itemInputController.dispose();
     _mnemonicController.dispose();
@@ -112,6 +159,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
     }
 
     final matchedEmoji = EmojiPresets.matchEmoji(trimmed);
+    HapticService.lightImpact();
     setState(() {
       _items.add((name: trimmed, emoji: matchedEmoji));
       _updateMnemonicIfAuto();
@@ -120,13 +168,39 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
   }
 
   void _removeItem(int index) {
+    if (index < 0 || index >= _items.length) return;
+    final removed = _items[index];
+    HapticService.lightImpact();
     setState(() {
       _items.removeAt(index);
       _updateMnemonicIfAuto();
     });
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('已移除「${removed.name}」'),
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: '撤销',
+          textColor: AppColors.pastelAmber,
+          onPressed: () {
+            if (!mounted) return;
+            if (_items.any((i) => i.name.trim() == removed.name.trim())) return;
+            setState(() {
+              final insertAt = index.clamp(0, _items.length);
+              _items.insert(insertAt, removed);
+              _updateMnemonicIfAuto();
+            });
+          },
+        ),
+      ),
+    );
   }
 
   void _reorderItems(int oldIndex, int newIndex) {
+    HapticService.selection();
     setState(() {
       if (oldIndex < newIndex) {
         newIndex -= 1;
@@ -137,7 +211,56 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
     });
   }
 
+  Future<void> _handleBackAttempt() async {
+    if (!_hasUnsavedChanges) {
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/');
+        }
+      }
+      return;
+    }
+
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: const Text(
+            '放弃未保存的修改？',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.3),
+          ),
+          content: const Text(
+            '当前清单的改动还未保存，返回后将不会保留。',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('继续编辑', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('放弃'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (discard == true && mounted) {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/');
+      }
+    }
+  }
+
   Future<void> _saveChecklist() async {
+    if (_isSaving) return;
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -145,6 +268,23 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
       );
       return;
     }
+
+    // Auto-commit pending typed item if user forgot to press Enter / '+'
+    final pendingItem = _itemInputController.text.trim();
+    if (pendingItem.isNotEmpty) {
+      final alreadyExists = _items.any((i) => i.name.trim() == pendingItem);
+      if (!alreadyExists) {
+        _items.add((name: pendingItem, emoji: EmojiPresets.matchEmoji(pendingItem)));
+        _updateMnemonicIfAuto();
+      }
+      _itemInputController.clear();
+    }
+
+    if (_reminderEnabled && _reminderWeekdays.isEmpty) {
+      _reminderWeekdays.addAll([1, 2, 3, 4, 5]);
+    }
+
+    setState(() => _isSaving = true);
 
     final mnemonic = _mnemonicEnabled ? _mnemonicController.text.trim() : null;
     final timeStr =
@@ -190,7 +330,12 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
     }
 
     if (mounted) {
-      context.pop();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/');
+      }
     }
   }
 
@@ -205,7 +350,13 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
         .where((name) => !existingNames.contains(name))
         .toList();
 
-    return Scaffold(
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackAttempt();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(widget.checklistId == null ? '新建清单' : '编辑清单'),
         actions: [
@@ -217,7 +368,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                 shape: const StadiumBorder(),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
-              onPressed: _saveChecklist,
+              onPressed: _isSaving ? null : _saveChecklist,
               child: const Text('保存'),
             ),
           ),
@@ -232,30 +383,59 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                GestureDetector(
-                  onTap: _showEmojiPicker,
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.border, width: 0.6),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color.fromRGBO(28, 25, 23, 0.05),
-                          blurRadius: 16,
-                          offset: Offset(0, 4),
+                Semantics(
+                  button: true,
+                  label: '更换清单图标',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _showEmojiPicker,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.border, width: 0.8),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color.fromRGBO(28, 25, 23, 0.05),
+                                blurRadius: 16,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: ChecklistAvatar(
+                            emoji: _selectedEmoji,
+                            size: 26,
+                            strokeWidth: 2.2,
+                            strokeColor: AppColors.primary,
+                            hardwareColor: AppColors.backpackHardware,
+                          ),
+                        ),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.card, width: 1.5),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.edit_rounded,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ],
-                    ),
-                    alignment: Alignment.center,
-                    child: ChecklistAvatar(
-                      emoji: _selectedEmoji,
-                      size: 26,
-                      strokeWidth: 2.2,
-                      strokeColor: AppColors.primary,
-                      hardwareColor: AppColors.backpackHardware,
                     ),
                   ),
                 ),
@@ -289,7 +469,13 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
             // 2. Add Item Input
             const Text(
               '添加物品',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+                height: 1.35,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
@@ -316,9 +502,11 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
-                  icon: const Icon(Icons.add),
+                  tooltip: '添加物品',
+                  icon: const Icon(Icons.add_rounded),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    minimumSize: const Size(48, 48),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
                   onPressed: () => _addItem(_itemInputController.text),
@@ -359,10 +547,17 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
               children: [
                 Text(
                   '物品列表 (${_items.length})',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                    height: 1.35,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const Text(
-                  '长按拖动排序',
+                  '长按拖动排序 · 左滑移除',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                 ),
               ],
@@ -406,7 +601,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         color: AppColors.danger,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.delete, color: Colors.white),
+                      child: const Icon(Icons.delete_outline, color: Colors.white),
                     ),
                     onDismissed: (_) => _removeItem(index),
                     child: Card(
@@ -425,17 +620,28 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
-                          child: Text(item.emoji, style: const TextStyle(fontSize: 18)),
+                          child: ChecklistAvatar(
+                            emoji: item.emoji,
+                            size: 18,
+                            strokeWidth: 1.6,
+                            strokeColor: AppColors.primary,
+                          ),
                         ),
-                        title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                              tooltip: '移除 ${item.name}',
+                              icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
                               onPressed: () => _removeItem(index),
                             ),
-                            const Icon(Icons.drag_handle, color: AppColors.textSecondary),
+                            const Icon(Icons.drag_handle_rounded, color: AppColors.textSecondary),
                           ],
                         ),
                       ),
@@ -462,11 +668,17 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       children: [
                         const Text(
                           '口诀条',
-                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                            height: 1.35,
+                          ),
                         ),
                         Switch(
                           value: _mnemonicEnabled,
                           onChanged: (val) {
+                            HapticService.selection();
                             setState(() {
                               _mnemonicEnabled = val;
                               if (val) _updateMnemonicIfAuto();
@@ -516,11 +728,17 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       children: [
                         const Text(
                           '定时提醒',
-                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                            height: 1.35,
+                          ),
                         ),
                         Switch(
                           value: _reminderEnabled,
                           onChanged: (val) {
+                            HapticService.selection();
                             setState(() {
                               _reminderEnabled = val;
                             });
@@ -533,13 +751,21 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('提醒时间'),
-                        trailing: Text(
-                          _reminderTime.format(context),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _reminderTime.format(context),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textSecondary),
+                          ],
                         ),
                         onTap: () async {
                           final picked = await showTimePicker(
@@ -555,9 +781,8 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       ),
                       const SizedBox(height: 6),
                       const Text('重复日', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildWeekdayChip(1, '一'),
                           _buildWeekdayChip(2, '二'),
@@ -578,36 +803,62 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
   Widget _buildWeekdayChip(int day, String label) {
     final isSelected = _reminderWeekdays.contains(day);
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (isSelected) {
-            _reminderWeekdays.remove(day);
-          } else {
-            _reminderWeekdays.add(day);
-            _reminderWeekdays.sort();
-          }
-        });
-      },
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.primaryLight,
-          shape: BoxShape.circle,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: '周$label',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            HapticService.selection();
+            if (isSelected && _reminderWeekdays.length <= 1) {
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.hideCurrentSnackBar();
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('定时提醒至少保留一天'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
+            setState(() {
+              if (isSelected) {
+                _reminderWeekdays.remove(day);
+              } else {
+                _reminderWeekdays.add(day);
+                _reminderWeekdays.sort();
+              }
+            });
+          },
+          child: SizedBox(
+            height: 48,
+            child: Center(
+              child: Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : AppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -615,19 +866,36 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
   }
 
   void _showEmojiPicker() {
+    HapticService.selection();
     showModalBottomSheet(
       context: context,
-      builder: (context) {
+      builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 const Text(
                   '选择清单图标',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -636,10 +904,11 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                   children: _emojiPickerOptions.map((e) {
                     return GestureDetector(
                       onTap: () {
+                        HapticService.selection();
                         setState(() {
                           _selectedEmoji = e;
                         });
-                        context.pop();
+                        Navigator.pop(sheetContext);
                       },
                       child: Container(
                         width: 50,
@@ -647,7 +916,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: _selectedEmoji == e ? AppColors.primaryLight : AppColors.secondaryBg,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: _selectedEmoji == e ? AppColors.primary : AppColors.border,
                             width: _selectedEmoji == e ? 2 : 1,

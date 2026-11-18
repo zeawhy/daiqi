@@ -16,7 +16,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
+    with WidgetsBindingObserver {
   bool _sound = AudioService.enabled;
   bool _haptic = HapticService.enabled;
   bool _notificationGranted = false;
@@ -24,7 +25,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermission();
+    }
   }
 
   Future<void> _checkPermission() async {
@@ -37,21 +52,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _requestNotification() async {
+    HapticService.selection();
     final granted = await NotificationService.requestPermission();
     if (mounted) {
       setState(() {
         _notificationGranted = granted;
       });
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            granted ? '通知权限已开启' : '未获得通知权限，可在系统设置中开启',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   Future<void> _showClearRecordsDialog() async {
+    HapticService.selection();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('清除遗忘记录', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            '清除遗忘记录',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
           content: const Text(
             '确定要清除所有遗忘记录吗？排行榜和高危标记都将被重置，此操作无法撤销。',
             style: TextStyle(color: AppColors.textSecondary),
@@ -72,10 +105,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     if (confirmed == true && mounted) {
+      HapticService.lightImpact();
       final checklistRepo = ref.read(checklistRepositoryProvider);
       await checklistRepo.clearAllForgotRecords();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('已清除所有遗忘记录'),
             behavior: SnackBarBehavior.floating,
@@ -124,6 +160,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: const Text('放进背包、取出及拉链音效'),
                     value: _sound,
                     onChanged: (val) {
+                      HapticService.selection();
                       setState(() {
                         _sound = val;
                         AudioService.enabled = val;
@@ -140,6 +177,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _haptic = val;
                         HapticService.enabled = val;
                       });
+                      if (val) {
+                        HapticService.selection();
+                      }
                     },
                   ),
                   const Divider(height: 1, color: AppColors.border),
@@ -148,6 +188,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: const Text('开启后所有动画改为简单淡入淡出'),
                     value: reducedMotion,
                     onChanged: (val) {
+                      HapticService.selection();
                       ref.read(reducedMotionProvider.notifier).setReducedMotion(val);
                     },
                   ),
