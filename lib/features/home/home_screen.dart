@@ -1034,6 +1034,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _showCardMenu(ChecklistSummaryModel item) {
     HapticService.mediumImpact();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     showModalBottomSheet(
       context: context,
       builder: (sheetContext) {

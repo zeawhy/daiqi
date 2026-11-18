@@ -31,6 +31,7 @@ class OnboardingService {
   }
 
   static Future<void> markCompleted() async {
+    if (_completedMemory) return;
     _completedMemory = true;
     try {
       final dir = await getApplicationDocumentsDirectory();

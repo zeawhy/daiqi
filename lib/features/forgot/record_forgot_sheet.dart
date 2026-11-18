@@ -93,6 +93,10 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
     }
 
     if (_listId != null) {
+      if (_listName == null) {
+        final checklist = await checklistRepo.getChecklist(_listId!);
+        _listName = checklist?.name;
+      }
       _checklistItems = await checklistRepo.getItemsForChecklist(_listId!);
     }
 
@@ -209,18 +213,18 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        left: 22,
-        right: 22,
-        top: 12,
-      ),
-      child: _isLoading
+    return Material(
+      color: AppColors.card,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          left: 22,
+          right: 22,
+          top: 12,
+        ),
+        child: _isLoading
           ? const SizedBox(
               height: 200,
               child: Center(child: CircularProgressIndicator()),
@@ -448,6 +452,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                 ],
               ),
             ),
+      ),
     );
   }
 }
