@@ -61,7 +61,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
+  static const AssetImage _headerBackdropAsset =
+      AssetImage('assets/images/home_header_bg.webp');
+
   late AnimationController _floatController;
+  final ValueNotifier<double> _scrollOffset = ValueNotifier<double>(0.0);
+  bool _didPrecacheHeader = false;
 
   @override
   void initState() {
@@ -79,7 +84,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didPrecacheHeader) {
+      _didPrecacheHeader = true;
+      precacheImage(_headerBackdropAsset, context);
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollOffset.dispose();
     _floatController.dispose();
     super.dispose();
   }
@@ -120,54 +135,116 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _floatController.repeat(reverse: true);
     }
 
+    final double topInset = MediaQuery.paddingOf(context).top;
+    final double backdropHeight = (topInset + 196.0).clamp(215.0, 280.0);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // 0. Warm Rice Grey Gradient Masthead Backdrop (从屏幕物理最顶部向下延伸至 215dp)
+          // 0. Illustrated Warm Morning Masthead Backdrop (从屏幕物理最顶部向下延伸覆盖顶栏)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: 215,
+            height: backdropHeight,
             child: IgnorePointer(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(32),
-                ),
-                child: Container(
-                  key: const ValueKey('home_masthead_backdrop'),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.headerBackdropTop,
-                        AppColors.headerBackdropBottom,
-                      ],
+              child: RepaintBoundary(
+                child: ValueListenableBuilder<double>(
+                  valueListenable: _scrollOffset,
+                  builder: (context, offset, child) {
+                    final fade = (1.0 - (offset / 160.0)).clamp(0.0, 1.0);
+                    final translateY = reducedMotion ? -offset : -offset * 0.45;
+                    if (fade <= 0.0) return const SizedBox.shrink();
+                    return Transform.translate(
+                      offset: Offset(0, translateY),
+                      child: Opacity(
+                        opacity: fade,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(32),
                     ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Top-right Santorini warm sun glow (25% pastelAmber 暖阳微晕)
-                      Positioned(
-                        top: -20,
-                        right: -20,
-                        width: 280,
-                        height: 280,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                Color(0x40FEF3C7),
-                                Color(0x00FEF3C7),
-                              ],
-                            ),
-                          ),
+                    child: Container(
+                      key: const ValueKey('home_masthead_backdrop'),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.headerBackdropTop,
+                            AppColors.headerBackdropBottom,
+                          ],
                         ),
                       ),
-                    ],
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Native water-gouache morning sunbeam & olive foliage backdrop
+                          Image(
+                            key: const ValueKey('home_masthead_bg_image'),
+                            image: _headerBackdropAsset,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topRight,
+                            filterQuality: FilterQuality.medium,
+                            excludeFromSemantics: true,
+                            errorBuilder: (_, _, _) => const SizedBox.expand(),
+                          ),
+                          // Top-right Santorini warm sun glow accent
+                          Positioned(
+                            top: -20,
+                            right: -20,
+                            width: 280,
+                            height: 280,
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Color(0x28FEF3C7),
+                                    Color(0x00FEF3C7),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Left readability scrim: guarantees crisp text contrast across all viewport widths
+                          const DecoratedBox(
+                            key: ValueKey('home_masthead_readability_scrim'),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                stops: [0.0, 0.44, 0.68],
+                                colors: [
+                                  Color(0xB8FAF8F5),
+                                  Color(0x66FAF8F5),
+                                  Color(0x00FAF8F5),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Bottom seamless fade into page background (#F5F5F4)
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                stops: [0.0, 0.68, 1.0],
+                                colors: [
+                                  Color(0x00F5F5F4),
+                                  Color(0x8CF5F5F4),
+                                  AppColors.background,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -225,145 +302,174 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 checklists.where((c) => c.id != heroList?.id).toList();
             final customLists = checklists.where((c) => !c.isPreset).toList();
 
-            return CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
-              ),
-              slivers: [
-                // 1. Dynamic Header (带齐了 + 日期 + 纯白状态圆点问候胶囊)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.card,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color.fromRGBO(28, 25, 23, 0.05),
-                                      blurRadius: 12,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 7,
-                                      height: 7,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.doneAccent,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        _greetingBadgeText(),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.3,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                '带齐了',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.0,
-                                  height: 1.20,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                _formatWeekdaySubtitle(),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.4,
-                                  fontFeatures: [FontFeature.tabularFigures()],
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Floating animated mini-backpack in header (wrapped in RepaintBoundary)
-                        RepaintBoundary(
-                          child: Semantics(
-                            button: heroList != null,
-                            label: heroList != null
-                                ? '打开当前清单 ${heroList.name}'
-                                : '背包状态',
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: heroList == null
-                                  ? null
-                                  : () {
-                                      HapticService.lightImpact();
-                                      context.push('/pack/${heroList.id}');
-                                    },
-                              child: AnimatedBuilder(
-                                animation: _floatController,
-                                builder: (context, child) {
-                                  final dy = reducedMotion
-                                      ? 0.0
-                                      : sin(_floatController.value * pi) * 4.0;
-                                  return Transform.translate(
-                                    offset: Offset(0, -dy),
-                                    child: child,
-                                  );
-                                },
-                                child: Container(
-                                  width: 52,
-                                  height: 52,
+            return NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification.metrics.axis == Axis.vertical) {
+                  final clamped = notification.metrics.pixels.clamp(0.0, 220.0);
+                  if ((_scrollOffset.value - clamped).abs() > 0.5) {
+                    _scrollOffset.value = clamped;
+                  }
+                }
+                return false;
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                slivers: [
+                  // 1. Dynamic Header (带齐了 + 日期 + 纯白状态圆点问候胶囊)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  key: const ValueKey('home_greeting_pill'),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 5,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.card,
-                                    borderRadius: BorderRadius.circular(18),
+                                    color: const Color(0xF5FFFFFF),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(0xEBFFFFFF),
+                                      width: 1.0,
+                                    ),
                                     boxShadow: const [
                                       BoxShadow(
-                                        color: Color.fromRGBO(28, 25, 23, 0.05),
-                                        blurRadius: 18,
-                                        offset: Offset(0, 6),
+                                        color: Color.fromRGBO(28, 25, 23, 0.06),
+                                        blurRadius: 12,
+                                        offset: Offset(0, 4),
                                       ),
                                     ],
                                   ),
-                                  alignment: Alignment.center,
-                                  child: MiniBackpack(
-                                    progress: heroList?.progress ?? 0.0,
-                                    size: 32,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 7,
+                                        height: 7,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.doneAccent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          _greetingBadgeText(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.3,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  '带齐了',
+                                  style: TextStyle(
+                                    fontFamily: AppTheme.homeDisplayFontFamily,
+                                    fontFamilyFallback: [
+                                      'HarmonyOS Sans SC',
+                                      'MiSans',
+                                      'PingFang SC',
+                                      'Source Han Sans SC',
+                                      'Noto Sans CJK SC',
+                                      'sans-serif',
+                                    ],
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: 1.6,
+                                    height: 1.15,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatWeekdaySubtitle(),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.4,
+                                    fontFeatures: [FontFeature.tabularFigures()],
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Floating animated mini-backpack in header (wrapped in RepaintBoundary)
+                          RepaintBoundary(
+                            child: Semantics(
+                              button: heroList != null,
+                              label: heroList != null
+                                  ? '打开当前清单 ${heroList.name}'
+                                  : '背包状态',
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: heroList == null
+                                    ? null
+                                    : () {
+                                        HapticService.lightImpact();
+                                        context.push('/pack/${heroList.id}');
+                                      },
+                                child: AnimatedBuilder(
+                                  animation: _floatController,
+                                  builder: (context, child) {
+                                    final dy = reducedMotion
+                                        ? 0.0
+                                        : sin(_floatController.value * pi) * 4.0;
+                                    return Transform.translate(
+                                      offset: Offset(0, -dy),
+                                      child: child,
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 52,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xF5FFFFFF),
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: const Color(0xEBFFFFFF),
+                                        width: 1.0,
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color.fromRGBO(28, 25, 23, 0.06),
+                                          blurRadius: 18,
+                                          offset: Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: MiniBackpack(
+                                      progress: heroList?.progress ?? 0.0,
+                                      size: 32,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
                 // 2. Dynamic Hero Shortcut Card
                 if (heroList != null)
@@ -523,7 +629,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
               ],
-            );
+            ),
+          );
           },
         ),
       ),

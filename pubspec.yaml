@@ -76,6 +76,12 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/sounds/
+    - assets/images/
+
+  fonts:
+    - family: DaiqiDisplay
+      fonts:
+        - asset: assets/fonts/DaiqiDisplay-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

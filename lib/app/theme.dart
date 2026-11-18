@@ -64,6 +64,9 @@ class AppColors {
 class AppTheme {
   AppTheme._();
 
+  /// 首页「带齐了」大标题专属展示字体（阿里妈妈东方大楷子集，非思源宋体）
+  static const String homeDisplayFontFamily = 'DaiqiDisplay';
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
