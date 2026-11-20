@@ -810,29 +810,63 @@ class _PackScreenState extends ConsumerState<PackScreen>
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    '加载装包清单失败，请返回重试',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color.fromRGBO(28, 25, 23, 0.05),
+                      blurRadius: 20,
+                      offset: Offset(0, 6),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () {
-                      if (context.canPop()) {
-                        context.pop();
-                      } else {
-                        context.go('/');
-                      }
-                    },
-                    child: const Text('返回'),
-                  ),
-                ],
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '加载装包清单失败，请重试',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () {
+                            HapticService.selection();
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go('/');
+                            }
+                          },
+                          child: const Text('返回'),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton.icon(
+                          onPressed: () {
+                            HapticService.selection();
+                            ref.invalidate(
+                              sessionItemsStreamProvider(
+                                (sessionId: _session!.id, listId: widget.checklistId),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('重试'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -881,27 +915,34 @@ class _PackScreenState extends ConsumerState<PackScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(18),
                           ),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                '今天什么都不带吗？',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
+                              const Expanded(
+                                child: Text(
+                                  '今天什么都不带吗？',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: 12),
                               FilledButton(
                                 style: FilledButton.styleFrom(
                                   backgroundColor: AppColors.done,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                  shape: const StadiumBorder(),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
                                   ),
                                 ),
                                 onPressed: () async {
+                                  HapticService.lightImpact();
                                   AudioService.playDoor();
                                   if (_session != null) {
                                     await ref
@@ -1036,6 +1077,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     bool compactMode = false,
   }) {
     final pillHeight = compactMode ? 28.0 : 36.0;
+    final hitHeight = compactMode ? 36.0 : 48.0;
     const pillShadow = [
       BoxShadow(
         color: Color.fromRGBO(28, 25, 23, 0.05),
@@ -1045,7 +1087,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     ];
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: compactMode ? 4 : 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: compactMode ? 2 : 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1057,23 +1099,32 @@ class _PackScreenState extends ConsumerState<PackScreen>
                 label: '返回',
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => _handleBackPress(items),
-                  child: Container(
-                    height: pillHeight,
-                    constraints: const BoxConstraints(minWidth: 72),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: pillShadow,
-                    ),
-                    child: const Text(
-                      '‹ 返回',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                  onTap: () {
+                    HapticService.selection();
+                    _handleBackPress(items);
+                  },
+                  child: SizedBox(
+                    height: hitHeight,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        height: pillHeight,
+                        constraints: const BoxConstraints(minWidth: 72),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: pillShadow,
+                        ),
+                        child: const Text(
+                          '‹ 返回',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1084,23 +1135,32 @@ class _PackScreenState extends ConsumerState<PackScreen>
                 label: '编辑清单',
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: _openEditor,
-                  child: Container(
-                    height: pillHeight,
-                    constraints: const BoxConstraints(minWidth: 68),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: pillShadow,
-                    ),
-                    child: const Text(
-                      '编辑',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                  onTap: () {
+                    HapticService.selection();
+                    _openEditor();
+                  },
+                  child: SizedBox(
+                    height: hitHeight,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        height: pillHeight,
+                        constraints: const BoxConstraints(minWidth: 68),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: pillShadow,
+                        ),
+                        child: const Text(
+                          '编辑',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1132,8 +1192,8 @@ class _PackScreenState extends ConsumerState<PackScreen>
               ),
             )
           else if (!allSkipped)
-            RichText(
-              text: TextSpan(
+            Text.rich(
+              TextSpan(
                 style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
                 children: [
                   const TextSpan(text: '还差 '),
@@ -1142,6 +1202,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                     style: const TextStyle(
                       color: AppColors.orange,
                       fontWeight: FontWeight.w700,
+                      fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
                   const TextSpan(text: ' · 把东西拖进包里'),
@@ -1160,44 +1221,53 @@ class _PackScreenState extends ConsumerState<PackScreen>
         ? '🔴 ${unpackedHighRisk.map((e) => e.name).join('、')} 你以前忘过，先装它们'
         : '🔴 ${unpackedHighRisk.take(2).map((e) => e.name).join('、')} 等 ${unpackedHighRisk.length} 件你以前忘过，先装它们';
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: canCollapse
-          ? () => setState(() => _highRiskBannerExpanded = !_highRiskBannerExpanded)
+    return Semantics(
+      button: canCollapse,
+      label: canCollapse
+          ? (isExpanded ? '收起高危提醒' : '展开全部高危提醒')
           : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.dangerLight,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.danger.withValues(alpha: 0.22),
-            width: 0.8,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: canCollapse
+            ? () {
+                HapticService.selection();
+                setState(() => _highRiskBannerExpanded = !_highRiskBannerExpanded);
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.dangerLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.danger.withValues(alpha: 0.22),
+              width: 0.8,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                text,
-                maxLines: isExpanded ? null : 1,
-                overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.danger,
-                  fontWeight: FontWeight.w600,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  text,
+                  maxLines: isExpanded ? null : 1,
+                  overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            if (canCollapse) ...[
-              const SizedBox(width: 4),
-              Icon(
-                isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                size: 18,
-                color: AppColors.danger,
-              ),
+              if (canCollapse) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  size: 18,
+                  color: AppColors.danger,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
