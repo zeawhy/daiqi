@@ -541,7 +541,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: AppColors.borderStrong,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -817,7 +817,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color.fromRGBO(28, 25, 23, 0.05),
+                      color: AppColors.shadowSoft,
                       blurRadius: 20,
                       offset: Offset(0, 6),
                     ),
@@ -1080,7 +1080,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     final hitHeight = compactMode ? 36.0 : 48.0;
     const pillShadow = [
       BoxShadow(
-        color: Color.fromRGBO(28, 25, 23, 0.05),
+        color: AppColors.shadowSoft,
         blurRadius: 12,
         offset: Offset(0, 3),
       ),
@@ -1350,7 +1350,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
             borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(
-                color: Color.fromRGBO(28, 25, 23, 0.04),
+                color: AppColors.shadowLight,
                 blurRadius: 20,
                 offset: Offset(0, 6),
               ),
@@ -1400,7 +1400,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                 children: EmojiPresets.commonShortcuts.take(6).map((name) {
                   return ActionChip(
                     backgroundColor: AppColors.background,
-                    side: const BorderSide(color: AppColors.border, width: 0.6),
+                    side: const BorderSide(color: AppColors.borderStrong, width: 0.8),
                     label: Text('$name ${EmojiPresets.matchEmoji(name)}'),
                     onPressed: () => _addQuickItemToCurrentChecklist(name),
                   );

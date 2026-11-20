@@ -22,7 +22,7 @@ class ItemCardWidget extends StatelessWidget {
       // Placeholder box at original position during drag
       return CustomPaint(
         painter: DashedBorderPainter(
-          color: AppColors.primary.withValues(alpha: 0.35),
+          color: AppColors.borderStrong,
           strokeWidth: 1.5,
           radius: 20.0,
           dashLength: 6.0,
@@ -35,10 +35,10 @@ class ItemCardWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           alignment: Alignment.center,
-          child: Icon(
+          child: const Icon(
             Icons.north_rounded,
             size: 20,
-            color: AppColors.primary.withValues(alpha: 0.45),
+            color: AppColors.textSecondary,
           ),
         ),
       );
@@ -125,20 +125,19 @@ class ItemCardWidget extends StatelessWidget {
     }
 
     if (item.isSkipped) {
-      return Opacity(
-        opacity: 0.55,
-        child: CustomPaint(
-          painter: DashedBorderPainter(
-            color: AppColors.border,
-            strokeWidth: 1.2,
-            radius: 20.0,
+      return CustomPaint(
+        painter: DashedBorderPainter(
+          color: AppColors.borderStrong,
+          strokeWidth: 1.2,
+          radius: 20.0,
+        ),
+        child: Container(
+          height: 86,
+          decoration: BoxDecoration(
+            color: AppColors.cardPacked,
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Container(
-            height: 86,
-            decoration: BoxDecoration(
-              color: AppColors.cardPacked,
-              borderRadius: BorderRadius.circular(20),
-            ),
+          child: Center(
             child: _buildCardContent(
               isPacked: false,
               isSkipped: true,
@@ -168,7 +167,7 @@ class ItemCardWidget extends StatelessWidget {
           BoxShadow(
             color: isHighRisk
                 ? AppColors.danger.withValues(alpha: 0.08)
-                : const Color.fromRGBO(28, 25, 23, 0.05),
+                : AppColors.shadowSoft,
             offset: const Offset(0, 6),
             blurRadius: 18,
           ),
@@ -236,7 +235,7 @@ class ItemCardWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Opacity(
-            opacity: isPacked ? 0.45 : 1.0,
+            opacity: isPacked ? 0.60 : (isSkipped ? 0.55 : 1.0),
             child: Container(
               width: 36,
               height: 36,
