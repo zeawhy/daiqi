@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'theme.dart';
+
 /// Diagnostic screen shown when the app catches a fatal Dart error during
 /// startup (or later). It exists so a tester without a computer can copy the
 /// stack trace out of the app itself instead of using adb logcat.
@@ -29,6 +31,7 @@ class CrashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
       home: Scaffold(
         appBar: AppBar(
           title: const Text('带齐了启动出错（诊断版）'),

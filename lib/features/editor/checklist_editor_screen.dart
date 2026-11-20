@@ -427,7 +427,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                             border: Border.all(color: AppColors.border, width: 0.8),
                             boxShadow: const [
                               BoxShadow(
-                                color: Color.fromRGBO(28, 25, 23, 0.05),
+                                color: AppColors.shadowSoft,
                                 blurRadius: 16,
                                 offset: Offset(0, 4),
                               ),
@@ -487,11 +487,11 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+                        borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+                        borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
                       ),
                     ),
                   ),
@@ -525,11 +525,11 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+                        borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+                        borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
                       ),
                     ),
                     onSubmitted: (val) => _addItem(val),
@@ -571,7 +571,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                     avatar: Text(emoji, style: const TextStyle(fontSize: 14)),
                     label: Text(name),
                     backgroundColor: AppColors.card,
-                    side: const BorderSide(color: AppColors.border, width: 0.6),
+                    side: const BorderSide(color: AppColors.borderStrong, width: 0.8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     onPressed: () => _addItem(name),
                   );
@@ -613,7 +613,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color.fromRGBO(28, 25, 23, 0.04),
+                      color: AppColors.shadowLight,
                       blurRadius: 18,
                       offset: Offset(0, 6),
                     ),
@@ -752,8 +752,15 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         },
                         decoration: InputDecoration(
                           hintText: '如：身手钥钱',
+                          filled: true,
+                          fillColor: AppColors.background,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(18),
+                            borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
                           ),
                           helperText: '最多 8 个字，按顺序对应前 N 件物品',
                           helperMaxLines: 2,
@@ -962,7 +969,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: AppColors.border,
+                      color: AppColors.borderStrong,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),

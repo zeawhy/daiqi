@@ -240,7 +240,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.border,
+                        color: AppColors.borderStrong,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -301,7 +301,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                             ),
                             side: BorderSide(
-                              color: isSelected ? AppColors.primary : AppColors.border,
+                              color: isSelected ? AppColors.primary : AppColors.borderStrong,
                               width: 0.8,
                             ),
                             shape: RoundedRectangleBorder(
@@ -333,7 +333,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                             ),
                             side: BorderSide(
-                              color: isSelected ? AppColors.primary : AppColors.border,
+                              color: isSelected ? AppColors.primary : AppColors.borderStrong,
                               width: 0.8,
                             ),
                             shape: RoundedRectangleBorder(
@@ -378,11 +378,11 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                             fillColor: AppColors.background,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+                              borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+                              borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
                             ),
                           ),
                           onSubmitted: (_) => _addCustomItem(),
@@ -440,8 +440,8 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppColors.secondaryBg,
-                        disabledForegroundColor: AppColors.textSecondary,
+                        disabledBackgroundColor: AppColors.disabledBg,
+                        disabledForegroundColor: AppColors.disabledFg,
                         shape: const StadiumBorder(),
                       ),
                       onPressed: _canSubmit ? _save : null,
