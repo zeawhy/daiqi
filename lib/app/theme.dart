@@ -286,6 +286,9 @@ class AppTheme {
           borderRadius: BorderRadius.circular(28),
         ),
       ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+      ),
     );
   }
 }
