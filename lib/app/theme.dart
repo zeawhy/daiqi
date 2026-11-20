@@ -11,6 +11,21 @@ class AppColors {
   static const Color cardPacked = Color(0xFFF0EFED);
   static const Color secondaryBg = Color(0xFFEEEEEC);
   static const Color border = Color(0xFFE7E5E4);
+  static const Color borderStrong = Color(0xFF96908A);
+
+  // Disabled Control States (6.57:1 contrast: #57534E on #EEEEEC)
+  static const Color disabledBg = secondaryBg;
+  static const Color disabledFg = textSecondary;
+
+  // On-Dark Foreground Tokens
+  static const Color onDark = Color(0xFFFFFFFF);
+  static const Color onDarkSubtle = Color(0x66FFFFFF);
+
+  // Warm Charcoal Diffused Shadows (derived from textPrimary #1C1917)
+  static const Color shadowHairline = Color.fromRGBO(28, 25, 23, 0.03);
+  static const Color shadowLight = Color.fromRGBO(28, 25, 23, 0.04);
+  static const Color shadowSoft = Color.fromRGBO(28, 25, 23, 0.05);
+  static const Color shadowMedium = Color.fromRGBO(28, 25, 23, 0.06);
 
   // Primary Charcoal (Santorini Warm Editorial Minimalist)
   static const Color primary = Color(0xFF262626);
@@ -43,9 +58,18 @@ class AppColors {
   // Hardware & Accents
   static const Color backpackHardware = Color(0xFF57534E);
 
-  // Masthead Backdrop Gradients (Santorini Warm Travertine)
+  // Masthead Backdrop Gradients & Frosted Glass (Santorini Warm Travertine)
   static const Color headerBackdropTop = Color(0xFFEAE7E1);
   static const Color headerBackdropBottom = Color(0xFFF5F5F4);
+  static const Color headerSunGlow = Color(0x28FEF3C7);
+  static const Color headerSunGlowEnd = Color(0x00FEF3C7);
+  static const Color headerScrimStart = Color(0xB8FAF8F5);
+  static const Color headerScrimMid = Color(0x66FAF8F5);
+  static const Color headerScrimEnd = Color(0x00FAF8F5);
+  static const Color headerFadeStart = Color(0x00F5F5F4);
+  static const Color headerFadeMid = Color(0x8CF5F5F4);
+  static const Color glassSurface = Color(0xF5FFFFFF);
+  static const Color glassBorder = Color(0xEBFFFFFF);
 
   // Editorial Gradients
   static const LinearGradient primaryGradient = LinearGradient(
@@ -73,13 +97,21 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
-        onPrimary: Colors.white,
+        onPrimary: AppColors.onDark,
         secondary: AppColors.primaryLight,
         onSecondary: AppColors.primary,
         surface: AppColors.card,
         onSurface: AppColors.textPrimary,
+        onSurfaceVariant: AppColors.textSecondary,
+        outline: AppColors.borderStrong,
+        outlineVariant: AppColors.border,
+        surfaceContainerLowest: AppColors.card,
+        surfaceContainerLow: AppColors.background,
+        surfaceContainer: AppColors.secondaryBg,
+        surfaceContainerHigh: AppColors.primaryLight,
+        surfaceContainerHighest: AppColors.border,
         error: AppColors.danger,
-        onError: Colors.white,
+        onError: AppColors.onDark,
       ),
       fontFamilyFallback: const [
         'HarmonyOS Sans SC',
@@ -189,7 +221,9 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onDark,
+          disabledBackgroundColor: AppColors.disabledBg,
+          disabledForegroundColor: AppColors.disabledFg,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           shape: const StadiumBorder(),
@@ -202,7 +236,9 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onDark,
+          disabledBackgroundColor: AppColors.disabledBg,
+          disabledForegroundColor: AppColors.disabledFg,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           shape: const StadiumBorder(),
@@ -215,9 +251,20 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.border, width: 1.0),
+          disabledForegroundColor: AppColors.disabledFg,
+          side: const BorderSide(color: AppColors.borderStrong, width: 1.0),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           shape: const StadiumBorder(),
+          textStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          disabledForegroundColor: AppColors.disabledFg,
           textStyle: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -227,47 +274,102 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.card,
+        hintStyle: const TextStyle(color: AppColors.textSecondary),
+        helperStyle: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 12,
+        ),
+        errorStyle: const TextStyle(
+          color: AppColors.danger,
+          fontSize: 12,
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+          borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.border, width: 0.8),
+          borderSide: const BorderSide(color: AppColors.borderStrong, width: 0.9),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1.0),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
+        ),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return Colors.white;
+          if (states.contains(WidgetState.selected)) return AppColors.onDark;
           return AppColors.textSecondary;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return AppColors.primary;
           return AppColors.secondaryBg;
         }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.transparent;
+          return AppColors.borderStrong;
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(AppColors.onDark),
+        side: const BorderSide(color: AppColors.textSecondary, width: 1.6),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.card,
         selectedColor: AppColors.primary,
-        side: BorderSide.none,
+        checkmarkColor: AppColors.onDark,
+        surfaceTintColor: Colors.transparent,
+        labelStyle: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w500,
+        ),
+        secondaryLabelStyle: const TextStyle(
+          color: AppColors.onDark,
+          fontWeight: FontWeight.w600,
+        ),
+        side: const BorderSide(color: AppColors.borderStrong, width: 0.8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
       ),
       listTileTheme: ListTileThemeData(
+        iconColor: AppColors.textPrimary,
+        textColor: AppColors.textPrimary,
+        subtitleTextStyle: const TextStyle(
+          fontSize: 13,
+          color: AppColors.textSecondary,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.border,
+        thickness: 1,
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.textPrimary,
+        contentTextStyle: const TextStyle(
+          color: AppColors.onDark,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        actionTextColor: AppColors.pastelAmber,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
         ),
@@ -282,12 +384,59 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.card,
         surfaceTintColor: Colors.transparent,
+        titleTextStyle: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+          color: AppColors.textPrimary,
+        ),
+        contentTextStyle: const TextStyle(
+          fontSize: 14,
+          height: 1.45,
+          color: AppColors.textSecondary,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(28),
         ),
       ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: AppColors.card,
+        dialBackgroundColor: AppColors.background,
+        dialHandColor: AppColors.primary,
+        dialTextColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.onDark;
+          return AppColors.textPrimary;
+        }),
+        hourMinuteColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          return AppColors.secondaryBg;
+        }),
+        hourMinuteTextColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.onDark;
+          return AppColors.textPrimary;
+        }),
+        dayPeriodColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          return AppColors.secondaryBg;
+        }),
+        dayPeriodTextColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.onDark;
+          return AppColors.textPrimary;
+        }),
+        dayPeriodBorderSide: const BorderSide(
+          color: AppColors.borderStrong,
+          width: 0.9,
+        ),
+        entryModeIconColor: AppColors.textSecondary,
+        helpTextStyle: const TextStyle(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.primary,
+        linearTrackColor: AppColors.secondaryBg,
+        circularTrackColor: AppColors.secondaryBg,
       ),
     );
   }
