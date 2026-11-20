@@ -71,8 +71,31 @@ void main() {
       );
     }
 
+    /// Advances frames in fixed increments instead of [WidgetTester.pumpAndSettle]
+    /// because [BackpackWidget] runs a continuous `_waveController.repeat()` loop
+    /// when `reducedMotion` is false.
+    Future<void> pumpFrames(
+      WidgetTester tester, {
+      Duration total = const Duration(milliseconds: 500),
+      Duration step = const Duration(milliseconds: 50),
+    }) async {
+      var elapsed = Duration.zero;
+      while (elapsed < total) {
+        await tester.pump(step);
+        elapsed += step;
+      }
+    }
+
     testWidgets('Single-item checklist edge case: packing item navigates to DoneScreen',
         (WidgetTester tester) async {
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
       final checklistRepo = container.read(checklistRepositoryProvider);
       final listId = await checklistRepo.createChecklist(
         name: '单件清单',
@@ -106,12 +129,11 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(createTestApp(const SizedBox.shrink(), router: router));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       expect(find.text('唯独钥匙'), findsOneWidget);
       expect(find.text('0 / 1'), findsOneWidget);
 
-      
       // Tap single item to pack
       await tester.tap(find.text('唯独钥匙'));
       await tester.pump();
@@ -120,7 +142,7 @@ void main() {
       for (int i = 0; i < 15; i++) {
         await tester.pump(const Duration(milliseconds: 200));
       }
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Should be on DoneScreen with "出门 🚪" button
       expect(find.text('出门 🚪'), findsOneWidget);
@@ -129,6 +151,14 @@ void main() {
 
     testWidgets('Over 15 items checklist: renders cleanly with scrollable grid',
         (WidgetTester tester) async {
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
       final checklistRepo = container.read(checklistRepositoryProvider);
       final manyItems = List.generate(
         18,
@@ -146,7 +176,7 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(createTestApp(PackScreen(checklistId: listId)));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       expect(find.text('0 / 18'), findsOneWidget);
       expect(find.text('物品1'), findsOneWidget);
@@ -157,7 +187,7 @@ void main() {
 
       // Drag to scroll down
       await tester.drag(scrollableFinder, const Offset(0, -400));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Items further down should be visible
       expect(find.text('物品18'), findsOneWidget);
@@ -226,6 +256,14 @@ void main() {
 
     testWidgets('All skipped items triggers "今天什么都不带吗？" with "直接出门"',
         (WidgetTester tester) async {
+      addTearDown(() async {
+        container.dispose();
+        await tester.pump();
+        if (!dbClosed) {
+          await inMemoryDb.close();
+          dbClosed = true;
+        }
+      });
       final checklistRepo = container.read(checklistRepositoryProvider);
       final listId = await checklistRepo.createChecklist(
         name: '不带清单',
@@ -251,16 +289,16 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       await tester.pumpWidget(createTestApp(const SizedBox.shrink(), router: router));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Long press item to skip
       await tester.longPress(find.text('随身物品'));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Tap "今天不带"
       expect(find.text('今天不带'), findsOneWidget);
       await tester.tap(find.text('今天不带'));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Empty prompt should appear
       expect(find.text('今天什么都不带吗？'), findsOneWidget);
@@ -268,7 +306,7 @@ void main() {
 
       // Tap "直接出门"
       await tester.tap(find.text('直接出门'));
-      await tester.pumpAndSettle();
+      await pumpFrames(tester);
 
       // Navigated to HomeScreen
       expect(find.text('HomeScreen'), findsOneWidget);
