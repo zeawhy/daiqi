@@ -235,7 +235,7 @@ class ItemCardWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Opacity(
-            opacity: isPacked ? 0.60 : (isSkipped ? 0.55 : 1.0),
+            opacity: isPacked ? 0.45 : (isSkipped ? 0.55 : 1.0),
             child: Container(
               width: 36,
               height: 36,
