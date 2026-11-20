@@ -282,7 +282,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Item Chips
+                  // Item Chips or empty prompt
                   if (_checklistItems.isNotEmpty || _customItems.isNotEmpty)
                     Wrap(
                       spacing: 8,
@@ -352,6 +352,14 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                           );
                         }),
                       ],
+                    )
+                  else
+                    const Text(
+                      '输入这次忘带的物品，下次会自动置顶提醒',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   const SizedBox(height: 16),
 
@@ -384,11 +392,16 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                       IconButton.filled(
                         tooltip: '添加物品',
                         style: IconButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: _hasPendingCustomText
+                              ? AppColors.primary
+                              : AppColors.primaryLight,
+                          foregroundColor: _hasPendingCustomText
+                              ? Colors.white
+                              : AppColors.textSecondary,
                           minimumSize: const Size(48, 48),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                        icon: const Icon(Icons.add_rounded, color: Colors.white),
+                        icon: const Icon(Icons.add_rounded),
                         onPressed: _addCustomItem,
                       ),
                     ],
@@ -402,7 +415,7 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
                         title: Text(
-                          '将清单外的物品加入「$_listName」',
+                          '将清单外的物品加入「${_listName ?? '当前清单'}」',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
@@ -426,7 +439,9 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        disabledBackgroundColor: AppColors.border,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.secondaryBg,
+                        disabledForegroundColor: AppColors.textSecondary,
                         shape: const StadiumBorder(),
                       ),
                       onPressed: _canSubmit ? _save : null,
@@ -444,7 +459,6 @@ class _RecordForgotSheetState extends ConsumerState<RecordForgotSheet> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
                               ),
                             ),
                     ),
