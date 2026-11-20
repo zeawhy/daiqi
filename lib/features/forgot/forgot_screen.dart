@@ -128,7 +128,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color.fromRGBO(28, 25, 23, 0.05),
+                              color: AppColors.shadowSoft,
                               blurRadius: 20,
                               offset: Offset(0, 6),
                             ),
@@ -235,7 +235,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: const [
                               BoxShadow(
-                                color: Color.fromRGBO(28, 25, 23, 0.05),
+                                color: AppColors.shadowSoft,
                                 blurRadius: 24,
                                 offset: Offset(0, 8),
                               ),
@@ -318,7 +318,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: const [
                                   BoxShadow(
-                                    color: Color.fromRGBO(28, 25, 23, 0.05),
+                                    color: AppColors.shadowSoft,
                                     blurRadius: 24,
                                     offset: Offset(0, 8),
                                   ),
@@ -412,7 +412,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: const [
                                       BoxShadow(
-                                        color: Color.fromRGBO(28, 25, 23, 0.04),
+                                        color: AppColors.shadowLight,
                                         blurRadius: 16,
                                         offset: Offset(0, 4),
                                       ),
@@ -592,7 +592,7 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                     Container(
                       height: 10,
                       decoration: BoxDecoration(
-                        color: AppColors.background,
+                        color: AppColors.secondaryBg,
                         borderRadius: BorderRadius.circular(5),
                       ),
                     ),

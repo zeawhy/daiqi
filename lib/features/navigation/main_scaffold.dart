@@ -53,12 +53,12 @@ class MainScaffold extends ConsumerWidget {
               border: Border.all(color: AppColors.border, width: 0.5),
               boxShadow: const [
                 BoxShadow(
-                  color: Color.fromRGBO(28, 25, 23, 0.06),
+                  color: AppColors.shadowMedium,
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),
                 BoxShadow(
-                  color: Color.fromRGBO(28, 25, 23, 0.03),
+                  color: AppColors.shadowHairline,
                   blurRadius: 6,
                   offset: Offset(0, 2),
                 ),

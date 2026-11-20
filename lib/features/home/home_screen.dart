@@ -204,8 +204,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(
                                   colors: [
-                                    Color(0x28FEF3C7),
-                                    Color(0x00FEF3C7),
+                                    AppColors.headerSunGlow,
+                                    AppColors.headerSunGlowEnd,
                                   ],
                                 ),
                               ),
@@ -220,9 +220,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 end: Alignment.centerRight,
                                 stops: [0.0, 0.44, 0.68],
                                 colors: [
-                                  Color(0xB8FAF8F5),
-                                  Color(0x66FAF8F5),
-                                  Color(0x00FAF8F5),
+                                  AppColors.headerScrimStart,
+                                  AppColors.headerScrimMid,
+                                  AppColors.headerScrimEnd,
                                 ],
                               ),
                             ),
@@ -235,8 +235,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 end: Alignment.bottomCenter,
                                 stops: [0.0, 0.68, 1.0],
                                 colors: [
-                                  Color(0x00F5F5F4),
-                                  Color(0x8CF5F5F4),
+                                  AppColors.headerFadeStart,
+                                  AppColors.headerFadeMid,
                                   AppColors.background,
                                 ],
                               ),
@@ -263,7 +263,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color.fromRGBO(28, 25, 23, 0.05),
+                      color: AppColors.shadowSoft,
                       blurRadius: 20,
                       offset: Offset(0, 6),
                     ),
@@ -335,15 +335,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xF5FFFFFF),
+                                    color: AppColors.glassSurface,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: const Color(0xEBFFFFFF),
+                                      color: AppColors.glassBorder,
                                       width: 1.0,
                                     ),
                                     boxShadow: const [
                                       BoxShadow(
-                                        color: Color.fromRGBO(28, 25, 23, 0.06),
+                                        color: AppColors.shadowMedium,
                                         blurRadius: 12,
                                         offset: Offset(0, 4),
                                       ),
@@ -442,15 +442,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     width: 52,
                                     height: 52,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xF5FFFFFF),
+                                      color: AppColors.glassSurface,
                                       borderRadius: BorderRadius.circular(18),
                                       border: Border.all(
-                                        color: const Color(0xEBFFFFFF),
+                                        color: AppColors.glassBorder,
                                         width: 1.0,
                                       ),
                                       boxShadow: const [
                                         BoxShadow(
-                                          color: Color.fromRGBO(28, 25, 23, 0.06),
+                                          color: AppColors.shadowMedium,
                                           blurRadius: 18,
                                           offset: Offset(0, 6),
                                         ),
@@ -557,7 +557,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color.fromRGBO(28, 25, 23, 0.04),
+                              color: AppColors.shadowLight,
                               blurRadius: 20,
                               offset: Offset(0, 6),
                             ),
@@ -671,7 +671,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           borderRadius: BorderRadius.circular(28),
           boxShadow: const [
             BoxShadow(
-              color: Color.fromRGBO(28, 25, 23, 0.06),
+              color: AppColors.shadowMedium,
               blurRadius: 24,
               offset: Offset(0, 8),
             ),
@@ -837,7 +837,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               alignment: Alignment.center,
                               child: const Icon(
                                 Icons.more_horiz_rounded,
-                                color: AppColors.textPrimary,
+                                color: AppColors.textSecondary,
                                 size: 18,
                               ),
                             ),
@@ -918,7 +918,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             borderRadius: BorderRadius.circular(22),
             boxShadow: const [
               BoxShadow(
-                color: Color.fromRGBO(28, 25, 23, 0.05),
+                color: AppColors.shadowSoft,
                 blurRadius: 20,
                 offset: Offset(0, 6),
               ),
@@ -1114,7 +1114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       onTap: () => context.push('/editor'),
       child: CustomPaint(
         painter: DashedBorderPainter(
-          color: AppColors.border,
+          color: AppColors.borderStrong,
           strokeWidth: 1.4,
           radius: 24.0,
         ),
@@ -1162,7 +1162,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: AppColors.borderStrong,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

@@ -182,7 +182,7 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                         borderRadius: BorderRadius.circular(20),
                                         boxShadow: const [
                                           BoxShadow(
-                                            color: Color.fromRGBO(28, 25, 23, 0.05),
+                                            color: AppColors.shadowSoft,
                                             blurRadius: 12,
                                             offset: Offset(0, 4),
                                           ),
@@ -219,7 +219,7 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                               borderRadius: BorderRadius.circular(28),
                               boxShadow: const [
                                 BoxShadow(
-                                  color: Color.fromRGBO(28, 25, 23, 0.05),
+                                  color: AppColors.shadowSoft,
                                   blurRadius: 24,
                                   offset: Offset(0, 8),
                                 ),
@@ -291,6 +291,9 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                             child: FilledButton(
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.onDark,
+                                disabledBackgroundColor: AppColors.disabledBg,
+                                disabledForegroundColor: AppColors.disabledFg,
                                 shape: const StadiumBorder(),
                               ),
                               onPressed: _isDeparting ? null : _handleDepart,
@@ -300,7 +303,6 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.4,
-                                  color: Colors.white,
                                 ),
                               ),
                             ),
@@ -376,7 +378,7 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                 child: const Center(
                                   child: Icon(
                                     Icons.door_front_door_outlined,
-                                    color: Colors.white24,
+                                    color: AppColors.onDarkSubtle,
                                     size: 48,
                                   ),
                                 ),
@@ -397,7 +399,7 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                 child: const Center(
                                   child: Icon(
                                     Icons.door_sliding_outlined,
-                                    color: Colors.white24,
+                                    color: AppColors.onDarkSubtle,
                                     size: 48,
                                   ),
                                 ),

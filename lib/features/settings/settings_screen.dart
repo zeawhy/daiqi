@@ -157,7 +157,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               borderRadius: BorderRadius.circular(24),
               boxShadow: const [
                 BoxShadow(
-                  color: Color.fromRGBO(28, 25, 23, 0.05),
+                  color: AppColors.shadowSoft,
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),
@@ -262,7 +262,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               borderRadius: BorderRadius.circular(24),
               boxShadow: const [
                 BoxShadow(
-                  color: Color.fromRGBO(28, 25, 23, 0.05),
+                  color: AppColors.shadowSoft,
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),
@@ -357,7 +357,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               borderRadius: BorderRadius.circular(24),
               boxShadow: const [
                 BoxShadow(
-                  color: Color.fromRGBO(28, 25, 23, 0.05),
+                  color: AppColors.shadowSoft,
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),
@@ -397,7 +397,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               borderRadius: BorderRadius.circular(24),
               boxShadow: const [
                 BoxShadow(
-                  color: Color.fromRGBO(28, 25, 23, 0.05),
+                  color: AppColors.shadowSoft,
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),

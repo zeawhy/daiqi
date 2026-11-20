@@ -203,7 +203,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                         borderRadius: BorderRadius.circular(18),
                                         boxShadow: const [
                                           BoxShadow(
-                                            color: Color.fromRGBO(28, 25, 23, 0.05),
+                                            color: AppColors.shadowSoft,
                                             blurRadius: 12,
                                             offset: Offset(0, 4),
                                           ),
@@ -352,6 +352,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.done,
+                          foregroundColor: AppColors.onDark,
                           shape: const StadiumBorder(),
                         ),
                         onPressed: _finishOnboarding,
@@ -361,7 +362,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.4,
-                            color: Colors.white,
                           ),
                         ),
                       ),

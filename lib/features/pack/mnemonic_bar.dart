@@ -31,7 +31,7 @@ class MnemonicBar extends StatelessWidget {
         border: Border.all(color: AppColors.border, width: 0.6),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(28, 25, 23, 0.05),
+            color: AppColors.shadowSoft,
             blurRadius: 20,
             offset: Offset(0, 6),
           ),
