@@ -339,6 +339,23 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
     }
   }
 
+  String _weekdaySummary() {
+    final sorted = [..._reminderWeekdays]..sort();
+    if (sorted.length == 7) return '每天';
+    if (sorted.length == 5 &&
+        sorted[0] == 1 &&
+        sorted[1] == 2 &&
+        sorted[2] == 3 &&
+        sorted[3] == 4 &&
+        sorted[4] == 5) {
+      return '工作日';
+    }
+    if (sorted.length == 2 && sorted[0] == 6 && sorted[1] == 7) {
+      return '周末';
+    }
+    return '每周 ${sorted.length} 天';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -369,7 +386,16 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
               onPressed: _isSaving ? null : _saveChecklist,
-              child: const Text('保存'),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('保存'),
             ),
           ),
         ],
@@ -447,6 +473,15 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                     decoration: InputDecoration(
                       hintText: '清单名称（最多12字）',
                       counterText: '',
+                      suffixText: '${_nameController.text.characters.length}/12',
+                      suffixStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: _nameController.text.characters.length >= 12
+                            ? AppColors.orange
+                            : AppColors.textSecondary,
+                      ),
                       filled: true,
                       fillColor: AppColors.card,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -505,7 +540,12 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                   tooltip: '添加物品',
                   icon: const Icon(Icons.add_rounded),
                   style: IconButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: _itemInputController.text.trim().isNotEmpty
+                        ? AppColors.primary
+                        : AppColors.primaryLight,
+                    foregroundColor: _itemInputController.text.trim().isNotEmpty
+                        ? Colors.white
+                        : AppColors.textSecondary,
                     minimumSize: const Size(48, 48),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
@@ -595,13 +635,28 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                     key: ValueKey('${item.name}_$index'),
                     direction: DismissDirection.endToStart,
                     background: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
                       alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 16),
+                      padding: const EdgeInsets.only(right: 18),
                       decoration: BoxDecoration(
                         color: AppColors.danger,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.delete_outline, color: Colors.white),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                          SizedBox(width: 4),
+                          Text(
+                            '移除',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     onDismissed: (_) => _removeItem(index),
                     child: Card(
@@ -754,13 +809,23 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              _reminderTime.format(context),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                                color: AppColors.primary,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _reminderTime.format(context),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -768,6 +833,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                           ],
                         ),
                         onTap: () async {
+                          HapticService.selection();
                           final picked = await showTimePicker(
                             context: context,
                             initialTime: _reminderTime,
@@ -780,7 +846,20 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                         },
                       ),
                       const SizedBox(height: 6),
-                      const Text('重复日', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('重复日', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                          Text(
+                            _weekdaySummary(),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -898,36 +977,45 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                GridView.count(
+                  crossAxisCount: 4,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.25,
                   children: _emojiPickerOptions.map((e) {
-                    return GestureDetector(
-                      onTap: () {
-                        HapticService.selection();
-                        setState(() {
-                          _selectedEmoji = e;
-                        });
-                        Navigator.pop(sheetContext);
-                      },
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _selectedEmoji == e ? AppColors.primaryLight : AppColors.secondaryBg,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: _selectedEmoji == e ? AppColors.primary : AppColors.border,
-                            width: _selectedEmoji == e ? 2 : 1,
+                    final isSelected = _selectedEmoji == e;
+                    return Semantics(
+                      button: true,
+                      selected: isSelected,
+                      label: e == '🎒' ? '默认背包图标' : '图标 $e',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          HapticService.selection();
+                          setState(() {
+                            _selectedEmoji = e;
+                          });
+                          Navigator.pop(sheetContext);
+                        },
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primaryLight : AppColors.secondaryBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected ? AppColors.primary : AppColors.border,
+                              width: isSelected ? 2 : 0.8,
+                            ),
                           ),
-                        ),
-                        child: ChecklistAvatar(
-                          emoji: e,
-                          size: 24,
-                          strokeWidth: 2.0,
-                          strokeColor: AppColors.primary,
-                          hardwareColor: AppColors.backpackHardware,
+                          child: ChecklistAvatar(
+                            emoji: e,
+                            size: 24,
+                            strokeWidth: 2.0,
+                            strokeColor: AppColors.primary,
+                            hardwareColor: AppColors.backpackHardware,
+                          ),
                         ),
                       ),
                     );

@@ -170,9 +170,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               ),
               child: Column(
                 children: [
-                  // Top action bar: Skip button
+                  // Top action bar: Skip button (>=48dp accessible hit target in normal layout)
                   SizedBox(
-                    height: compact ? 36 : 44,
+                    height: compact ? 38 : 48,
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: !_isDone
@@ -185,33 +185,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                   HapticService.selection();
                                   _finishOnboarding(skipPermission: true);
                                 },
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 64,
-                                    minHeight: 36,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.card,
-                                    borderRadius: BorderRadius.circular(18),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color.fromRGBO(28, 25, 23, 0.05),
-                                        blurRadius: 12,
-                                        offset: Offset(0, 4),
+                                child: SizedBox(
+                                  height: compact ? 38 : 48,
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 64,
+                                        minHeight: 34,
                                       ),
-                                    ],
-                                  ),
-                                  child: const Text(
-                                    '跳过',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textSecondary,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.card,
+                                        borderRadius: BorderRadius.circular(18),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color.fromRGBO(28, 25, 23, 0.05),
+                                            blurRadius: 12,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        '跳过',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -280,12 +286,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                           isPlaceholder: true,
                         ),
                       ),
-                      child: GestureDetector(
-                        onTap: _onPackItem,
-                        child: const SizedBox(
-                          width: 110,
-                          height: 86,
-                          child: ItemCardWidget(item: _keyItem),
+                      child: Semantics(
+                        button: true,
+                        label: '把钥匙装进背包',
+                        child: GestureDetector(
+                          onTap: _onPackItem,
+                          child: const SizedBox(
+                            width: 110,
+                            height: 86,
+                            child: ItemCardWidget(item: _keyItem),
+                          ),
                         ),
                       ),
                     ),

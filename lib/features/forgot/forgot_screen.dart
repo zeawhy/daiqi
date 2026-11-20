@@ -19,6 +19,7 @@ class ForgotScreen extends ConsumerStatefulWidget {
 
 class _ForgotScreenState extends ConsumerState<ForgotScreen> {
   bool _isLoading = true;
+  bool _hasError = false;
   int _departedCount = 0;
   int _forgotCount = 0;
   int _streakCount = 0;
@@ -33,23 +34,33 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
   }
 
   Future<void> _loadData() async {
-    final checklistRepo = ref.read(checklistRepositoryProvider);
-    final sessionRepo = ref.read(packSessionRepositoryProvider);
+    try {
+      final checklistRepo = ref.read(checklistRepositoryProvider);
+      final sessionRepo = ref.read(packSessionRepositoryProvider);
 
-    final stats = await checklistRepo.getForgotStats();
-    final streak = await sessionRepo.getStreakZeroForgot();
-    final ranking = await checklistRepo.getTopForgottenItems();
-    final timeline = await checklistRepo.getRecentForgotRecords();
+      final stats = await checklistRepo.getForgotStats();
+      final streak = await sessionRepo.getStreakZeroForgot();
+      final ranking = await checklistRepo.getTopForgottenItems();
+      final timeline = await checklistRepo.getRecentForgotRecords();
 
-    if (mounted) {
-      setState(() {
-        _departedCount = stats.departedCount;
-        _forgotCount = stats.forgotCount;
-        _streakCount = streak;
-        _ranking = ranking;
-        _timeline = timeline;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _departedCount = stats.departedCount;
+          _forgotCount = stats.forgotCount;
+          _streakCount = streak;
+          _ranking = ranking;
+          _timeline = timeline;
+          _hasError = false;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -106,7 +117,54 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
+            : _hasError
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color.fromRGBO(28, 25, 23, 0.05),
+                              blurRadius: 20,
+                              offset: Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              '加载遗忘记录失败，请重试',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            FilledButton.icon(
+                              onPressed: () {
+                                HapticService.selection();
+                                setState(() {
+                                  _isLoading = true;
+                                  _hasError = false;
+                                });
+                                _loadData();
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                              label: const Text('重试'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
                 onRefresh: _loadData,
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -146,11 +204,12 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 12),
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                minimumSize: const Size(0, 44),
+                                minimumSize: const Size(0, 48),
                                 shape: const StadiumBorder(),
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               ),
@@ -329,7 +388,21 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                     color: AppColors.danger,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Icon(Icons.delete_outline, color: Colors.white),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        '删除',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 onDismissed: (_) => _deleteRecord(item.record.id),
                                 child: Container(
@@ -468,9 +541,9 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
             strokeColor: AppColors.primary,
           ),
           const SizedBox(width: 8),
-          // Name + High risk indicator
+          // Name + High risk badge
           ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 72, maxWidth: 104),
+            constraints: const BoxConstraints(minWidth: 72, maxWidth: 120),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -487,13 +560,21 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                   ),
                 ),
                 if (data.isHighRisk) ...[
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 5),
                   Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: AppColors.danger,
-                      shape: BoxShape.circle,
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: AppColors.dangerLight,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      '高危',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        height: 1.15,
+                        color: AppColors.danger,
+                      ),
                     ),
                   ),
                 ],

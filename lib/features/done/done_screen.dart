@@ -165,13 +165,17 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                               label: '返回',
                               child: GestureDetector(
                                 behavior: HitTestBehavior.opaque,
-                                onTap: _handleBackDeparture,
+                                onTap: () {
+                                  HapticService.selection();
+                                  _handleBackDeparture();
+                                },
                                 child: SizedBox(
                                   height: compact ? 38 : 48,
                                   child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: Container(
                                       height: compact ? 32 : 38,
+                                      constraints: const BoxConstraints(minWidth: 76),
                                       padding: const EdgeInsets.symmetric(horizontal: 14),
                                       decoration: BoxDecoration(
                                         color: AppColors.card,
@@ -184,14 +188,15 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                                           ),
                                         ],
                                       ),
-                                      width: 76,
-                                      alignment: Alignment.center,
-                                      child: const Text(
-                                        '‹ 返回',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: AppColors.textPrimary,
-                                          fontWeight: FontWeight.w600,
+                                      child: const Center(
+                                        widthFactor: 1.0,
+                                        child: Text(
+                                          '‹ 返回',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
                                       ),
                                     ),
