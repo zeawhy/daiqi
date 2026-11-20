@@ -514,6 +514,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                   color: AppColors.textSecondary,
                                 ),
                               ),
@@ -861,7 +862,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       vertical: 12,
                     ),
                   ),
-                  onPressed: () => context.push('/pack/${hero.id}'),
+                  onPressed: () {
+                    HapticService.lightImpact();
+                    context.push('/pack/${hero.id}');
+                  },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
@@ -992,6 +996,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w600,
+                                    fontFeatures: const [FontFeature.tabularFigures()],
                                     color: isCompleted
                                         ? AppColors.done
                                         : AppColors.orange,
@@ -1029,6 +1034,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               color: AppColors.danger,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
+                              fontFeatures: [FontFeature.tabularFigures()],
                             ),
                           ),
                         ],
