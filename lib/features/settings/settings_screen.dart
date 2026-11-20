@@ -121,6 +121,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     }
   }
 
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 2, 6, 6),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final reducedMotion = ref.watch(reducedMotionProvider);
@@ -130,10 +145,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       appBar: AppBar(
         title: const Text('设置'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Section 1: Feedback & Motion
+          _buildSectionHeader('交互与反馈'),
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
@@ -156,6 +174,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               child: Column(
                 children: [
                   SwitchListTile(
+                    secondary: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: AppColors.pastelLavender,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.volume_up_outlined,
+                        color: AppColors.textPrimary,
+                        size: 20,
+                      ),
+                    ),
                     title: const Text('声音', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('放进背包、取出及拉链音效'),
                     value: _sound,
@@ -169,6 +200,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                   ),
                   const Divider(height: 1, color: AppColors.border),
                   SwitchListTile(
+                    secondary: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: AppColors.pastelSky,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.vibration_rounded,
+                        color: AppColors.textPrimary,
+                        size: 20,
+                      ),
+                    ),
                     title: const Text('震动', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('拖动、吸附及装包触感反馈'),
                     value: _haptic,
@@ -184,6 +228,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                   ),
                   const Divider(height: 1, color: AppColors.border),
                   SwitchListTile(
+                    secondary: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryLight,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.motion_photos_off_outlined,
+                        color: AppColors.textPrimary,
+                        size: 20,
+                      ),
+                    ),
                     title: const Text('减少动效', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('开启后所有动画改为简单淡入淡出'),
                     value: reducedMotion,
@@ -196,9 +253,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // Section 2: Permissions & Onboarding
+          _buildSectionHeader('通知与引导'),
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
@@ -239,11 +297,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                       ),
                     ),
                     trailing: _notificationGranted
-                        ? const Icon(Icons.check_circle, color: AppColors.done, size: 20)
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.doneLight,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle, color: AppColors.done, size: 15),
+                                SizedBox(width: 4),
+                                Text(
+                                  '已开启',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.done,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
                         : TextButton(
                             onPressed: _requestNotification,
                             child: const Text('去开启'),
                           ),
+                    onTap: _notificationGranted ? null : _requestNotification,
                   ),
                   const Divider(height: 1, color: AppColors.border),
                   ListTile(
@@ -259,15 +339,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                     title: const Text('重新播放引导', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('查看首次装包操作互动演示', style: TextStyle(fontSize: 12)),
                     trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-                    onTap: () => context.push('/onboarding'),
+                    onTap: () {
+                      HapticService.selection();
+                      context.push('/onboarding');
+                    },
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // Section 3: Data Management
+          _buildSectionHeader('数据管理'),
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
@@ -304,9 +388,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // Section 4: About
+          _buildSectionHeader('关于'),
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
@@ -352,7 +437,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
