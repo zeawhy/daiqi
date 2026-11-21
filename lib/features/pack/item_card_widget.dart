@@ -137,12 +137,36 @@ class ItemCardWidget extends StatelessWidget {
             color: AppColors.cardPacked,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Center(
-            child: _buildCardContent(
-              isPacked: false,
-              isSkipped: true,
-              isHighRisk: false,
-            ),
+          child: Stack(
+            children: [
+              Center(
+                child: _buildCardContent(
+                  isPacked: false,
+                  isSkipped: true,
+                  isHighRisk: false,
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    '不带',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      height: 1.1,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );

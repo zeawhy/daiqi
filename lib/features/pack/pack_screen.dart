@@ -12,6 +12,7 @@ import '../../shared/constants/emoji_presets.dart';
 import '../../shared/services/audio_service.dart';
 import '../../shared/services/haptic_service.dart';
 import '../../shared/widgets/brand_backpack_icon.dart';
+import '../../shared/widgets/dashed_border.dart';
 import 'backpack_widget.dart';
 import 'item_card_widget.dart';
 import 'mnemonic_bar.dart';
@@ -63,6 +64,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
   Offset _flightFromGlobal = Offset.zero;
   Offset Function() _flightToGlobal = _zeroOffset;
   Size _flightCardSize = const Size(110, 86);
+  double _flightArcLift = 0.0;
   Animation<double>? _flightScaleAnimation;
   Animation<double>? _flightOpacityAnimation;
   PackItemModel? _flyingItem;
@@ -323,6 +325,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
     Curve scaleCurve = Curves.easeIn,
     double opacityBegin = 1.0,
     double opacityEnd = 1.0,
+    double arcLift = 0.0,
     Future<void> Function()? onCompleted,
   }) {
     if (!mounted) return;
@@ -332,6 +335,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
 
     _flyingItem = item;
     _flightCardSize = size;
+    _flightArcLift = arcLift;
     _flightFromGlobal = fromGlobal;
     _flightToGlobal = toGlobal;
     _flightProgress = CurvedAnimation(parent: controller, curve: positionCurve);
@@ -429,6 +433,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
       scaleCurve: Curves.easeIn,
       opacityBegin: 1.0,
       opacityEnd: 0.0,
+      arcLift: reducedMotion ? 0.0 : 42.0,
       onCompleted: () => _commitPackItem(item),
     );
   }
@@ -493,6 +498,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
       scaleCurve: Curves.easeOut,
       opacityBegin: 0.2,
       opacityEnd: 1.0,
+      arcLift: reducedMotion ? 0.0 : 28.0,
     );
   }
 
@@ -1034,7 +1040,12 @@ class _PackScreenState extends ConsumerState<PackScreen>
                       animation: _flightController!,
                       builder: (context, _) {
                         // Offset.lerp extrapolates for t > 1, so easeOutBack overshoot still works.
-                        final g = Offset.lerp(_flightFromGlobal, _flightToGlobal(), _flightProgress!.value)!;
+                        final t = _flightProgress!.value;
+                        final linear = Offset.lerp(_flightFromGlobal, _flightToGlobal(), t)!;
+                        final lift = _flightArcLift != 0.0
+                            ? sin(t.clamp(0.0, 1.0) * pi) * _flightArcLift
+                            : 0.0;
+                        final g = Offset(linear.dx, linear.dy - lift);
                         final c = _toOverlayLocal(g);
                         final size = _flightCardSize;
 
@@ -1322,6 +1333,7 @@ class _PackScreenState extends ConsumerState<PackScreen>
                       onPointerUp: (e) => _onPointerUp(e, item),
                       onPointerCancel: (e) => _onPointerCancel(e, item),
                       child: GestureDetector(
+                        onTap: item.isSkipped ? () => _handleCardLongPress(item) : null,
                         onLongPress: () => _handleCardLongPress(item),
                         child: ItemCardWidget(
                           item: item,
@@ -1451,40 +1463,98 @@ class _PackScreenState extends ConsumerState<PackScreen>
     }
     final double backpackW = backpackH * 200.0 / 220.0;
 
-    return Container(
-      key: _backpackAreaKey,
-      padding: padding,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Backpack Widget
-          BackpackWidget(
-            key: _backpackKey,
-            progress: progress,
-            isOpen: _isHoveringDropZone,
-            isDone: isAllPacked,
-            reducedMotion: reducedMotion,
-            width: backpackW,
-            height: backpackH,
+    final isDragging = _draggingItem != null;
+    final String statusText;
+    final Color pillBg;
+    final Color pillFg;
+    final Color? pillBorder;
+    if (_isHoveringDropZone) {
+      statusText = '松手放进包里';
+      pillBg = AppColors.primary;
+      pillFg = AppColors.onDark;
+      pillBorder = null;
+    } else if (isDragging) {
+      statusText = '拖到这里放进包里';
+      pillBg = AppColors.primaryLight;
+      pillFg = AppColors.primary;
+      pillBorder = AppColors.borderStrong;
+    } else if (isAllPacked) {
+      statusText = '全部装好了 🎉';
+      pillBg = AppColors.doneLight;
+      pillFg = AppColors.done;
+      pillBorder = null;
+    } else {
+      statusText = '$packedCount / $totalCount';
+      pillBg = AppColors.card;
+      pillFg = AppColors.textSecondary;
+      pillBorder = AppColors.border;
+    }
+
+    final Widget dockContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Backpack Widget
+        BackpackWidget(
+          key: _backpackKey,
+          progress: progress,
+          isOpen: _isHoveringDropZone,
+          isDone: isAllPacked,
+          reducedMotion: reducedMotion,
+          width: backpackW,
+          height: backpackH,
+        ),
+        SizedBox(height: gap),
+        // Progress / Drop-Zone Status Capsule (Section 6.1)
+        AnimatedContainer(
+          key: const ValueKey('pack_status_pill'),
+          duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: availH < 420 ? 10 : 12,
+            vertical: availH < 420 ? 1 : 2,
           ),
-          SizedBox(height: gap),
-          // Progress text / Drop zone hint (Section 6.1)
-          Text(
-            _isHoveringDropZone
-                ? '松手放进包里'
-                : (isAllPacked ? '全部装好了 🎉' : '$packedCount / $totalCount'),
+          decoration: BoxDecoration(
+            color: pillBg,
+            borderRadius: BorderRadius.circular(14),
+            border: pillBorder != null
+                ? Border.all(color: pillBorder, width: 0.8)
+                : null,
+          ),
+          child: Text(
+            statusText,
             style: TextStyle(
               fontSize: textSize,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
               fontFeatures: const [FontFeature.tabularFigures()],
-              color: _isHoveringDropZone
-                  ? AppColors.primary
-                  : (isAllPacked ? AppColors.done : AppColors.textSecondary),
+              color: pillFg,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    return Container(
+      key: _backpackAreaKey,
+      padding: padding,
+      child: isDragging
+          ? CustomPaint(
+              key: const ValueKey('pack_drop_zone_halo'),
+              painter: DashedBorderPainter(
+                color: _isHoveringDropZone ? AppColors.primary : AppColors.borderStrong,
+                strokeWidth: _isHoveringDropZone ? 1.8 : 1.3,
+                radius: 24.0,
+                dashLength: 7.0,
+                dashGap: 5.0,
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: availH < 420 ? 12 : 20,
+                ),
+                child: dockContent,
+              ),
+            )
+          : dockContent,
     );
   }
 }

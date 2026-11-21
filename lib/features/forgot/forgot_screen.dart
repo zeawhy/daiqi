@@ -111,6 +111,8 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
     ref.listen(allChecklistsStreamProvider, (_, _) {
       _loadData();
     });
+    final reducedMotion =
+        ref.watch(reducedMotionProvider) || MediaQuery.disableAnimationsOf(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -329,7 +331,11 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                                 child: Column(
                                   children: [
                                     for (int i = 0; i < _ranking.length; i++)
-                                      _buildRankingItem(i + 1, _ranking[i]),
+                                      _buildRankingItem(
+                                        i + 1,
+                                        _ranking[i],
+                                        reducedMotion: reducedMotion,
+                                      ),
                                   ],
                                 ),
                               ),
@@ -513,7 +519,11 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
     );
   }
 
-  Widget _buildRankingItem(int rank, ({GlobalItem item, bool isHighRisk}) data) {
+  Widget _buildRankingItem(
+    int rank,
+    ({GlobalItem item, bool isHighRisk}) data, {
+    bool reducedMotion = false,
+  }) {
     final maxCount = _ranking.first.item.forgotCount;
     final ratio = maxCount > 0 ? (data.item.forgotCount / maxCount).clamp(0.05, 1.0) : 0.0;
 
@@ -521,19 +531,42 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          // Rank index
+          // Rank index (top #1 gets a soft danger badge for instant scanning)
           SizedBox(
-            width: 24,
-            child: Text(
-              '$rank',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: rank <= 3 ? AppColors.danger : AppColors.textSecondary,
-              ),
-            ),
+            width: 26,
+            child: rank == 1
+                ? Center(
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: AppColors.dangerLight,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '1',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                          color: AppColors.danger,
+                        ),
+                      ),
+                    ),
+                  )
+                : Text(
+                    '$rank',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: rank <= 3 ? AppColors.danger : AppColors.textSecondary,
+                    ),
+                  ),
           ),
+          const SizedBox(width: 4),
           ChecklistAvatar(
             emoji: data.item.emoji,
             size: 20,
@@ -582,11 +615,11 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // Bar Chart
+          // Animated Bar Chart
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final barWidth = constraints.maxWidth * ratio;
+                final targetWidth = constraints.maxWidth * ratio;
                 return Stack(
                   children: [
                     Container(
@@ -596,13 +629,25 @@ class _ForgotScreenState extends ConsumerState<ForgotScreen> {
                         borderRadius: BorderRadius.circular(5),
                       ),
                     ),
-                    Container(
-                      height: 10,
-                      width: barWidth,
-                      decoration: BoxDecoration(
-                        color: data.isHighRisk ? AppColors.danger : AppColors.primary,
-                        borderRadius: BorderRadius.circular(5),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(
+                        begin: reducedMotion ? targetWidth : 0.0,
+                        end: targetWidth,
                       ),
+                      duration: reducedMotion
+                          ? Duration.zero
+                          : Duration(milliseconds: 360 + (rank.clamp(1, 5) * 45)),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, width, _) {
+                        return Container(
+                          height: 10,
+                          width: width,
+                          decoration: BoxDecoration(
+                            color: data.isHighRisk ? AppColors.danger : AppColors.primary,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 );

@@ -31,6 +31,8 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
   int _totalCount = 0;
   int _packedCount = 0;
   int _streakCount = 0;
+  String? _checklistName;
+  List<String> _packedItemNames = [];
   bool _isLoading = true;
   bool _isDeparting = false;
 
@@ -51,17 +53,21 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
 
   Future<void> _loadData() async {
     final sessionRepo = ref.read(packSessionRepositoryProvider);
+    final checklistRepo = ref.read(checklistRepositoryProvider);
     final items = await sessionRepo.getPackItems(widget.sessionId, widget.listId);
     final streak = await sessionRepo.getStreakZeroForgot();
+    final checklist = await checklistRepo.getChecklist(widget.listId);
 
     final activeItems = items.where((i) => !i.isSkipped).toList();
-    final packed = activeItems.where((i) => i.isPacked).length;
+    final packedItems = activeItems.where((i) => i.isPacked).toList();
 
     if (mounted) {
       setState(() {
         _totalCount = activeItems.length;
-        _packedCount = packed;
+        _packedCount = packedItems.length;
         _streakCount = streak;
+        _checklistName = checklist?.name;
+        _packedItemNames = packedItems.map((i) => i.name).toList();
         _isLoading = false;
       });
     }
@@ -150,6 +156,9 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final compact = constraints.maxHeight < 520;
+                    final tight = constraints.maxHeight < 680;
+                    final backpackWidth = compact ? 110.0 : (tight ? 145.0 : 176.0);
+                    final backpackHeight = compact ? 132.0 : (tight ? 174.0 : 210.0);
                     return Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: 20,
@@ -205,84 +214,189 @@ class _DoneScreenState extends ConsumerState<DoneScreen>
                               ),
                             ),
                           ),
-                          const Spacer(),
-
-                          // Editorial commemorative white card
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: compact ? 16 : 24,
-                              vertical: compact ? 12 : 28,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.card,
-                              borderRadius: BorderRadius.circular(28),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: AppColors.shadowSoft,
-                                  blurRadius: 24,
-                                  offset: Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                BackpackWidget(
-                                  progress: 1.0,
-                                  isDone: true,
-                                  reducedMotion: reducedMotion,
-                                  width: compact ? 110 : 185,
-                                  height: compact ? 132 : 220,
-                                ),
-                                SizedBox(height: compact ? 10 : 24),
-
-                                // Title: 全部带齐，出门吧！
-                                Text(
-                                  '全部带齐，出门吧！',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: compact ? 20 : 23,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.4,
-                                    height: 1.28,
-                                    color: AppColors.textPrimary,
+                          Expanded(
+                            child: Center(
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                padding: EdgeInsets.symmetric(vertical: compact ? 4 : 10),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: compact ? 16 : 24,
+                                    vertical: compact ? 12 : (tight ? 18 : 24),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-
-                                // Subtitle: N / N 件已装包 (· 连续 X 次零遗漏 🔥 if streak >= 2)
-                                Wrap(
-                                  alignment: WrapAlignment.center,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 6,
-                                  runSpacing: 4,
-                                  children: [
-                                    Text(
-                                      '$_packedCount / $_totalCount 件已装包',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        fontFeatures: [FontFeature.tabularFigures()],
-                                        color: AppColors.textSecondary,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.card,
+                                    borderRadius: BorderRadius.circular(28),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: AppColors.shadowSoft,
+                                        blurRadius: 24,
+                                        offset: Offset(0, 8),
                                       ),
-                                    ),
-                                    if (_streakCount >= 2)
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!compact && _checklistName != null && _checklistName!.isNotEmpty) ...[
+                                        Container(
+                                          key: const ValueKey('done_checklist_pill'),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.background,
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Text(
+                                            _checklistName!,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: tight ? 10 : 14),
+                                      ],
+                                      BackpackWidget(
+                                        progress: 1.0,
+                                        isDone: true,
+                                        reducedMotion: reducedMotion,
+                                        width: backpackWidth,
+                                        height: backpackHeight,
+                                      ),
+                                      SizedBox(height: compact ? 10 : (tight ? 14 : 18)),
+
+                                      // Title: 全部带齐，出门吧！
                                       Text(
-                                        '· 连续 $_streakCount 次零遗漏 🔥',
-                                        style: const TextStyle(
-                                          fontSize: 15,
+                                        '全部带齐，出门吧！',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: compact ? 20 : 23,
                                           fontWeight: FontWeight.w600,
-                                          fontFeatures: [FontFeature.tabularFigures()],
-                                          color: AppColors.done,
+                                          letterSpacing: 0.4,
+                                          height: 1.28,
+                                          color: AppColors.textPrimary,
                                         ),
                                       ),
-                                  ],
+                                      const SizedBox(height: 8),
+
+                                      // Subtitle: N / N 件已装包 + celebratory streak badge
+                                      Wrap(
+                                        alignment: WrapAlignment.center,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        spacing: 8,
+                                        runSpacing: 6,
+                                        children: [
+                                          Text(
+                                            '$_packedCount / $_totalCount 件已装包',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                              fontFeatures: [FontFeature.tabularFigures()],
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                          if (_streakCount >= 2)
+                                            Container(
+                                              key: const ValueKey('done_streak_badge'),
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                                vertical: 3,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.doneLight,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                '连续 $_streakCount 次零遗漏 🔥',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontFeatures: [FontFeature.tabularFigures()],
+                                                  color: AppColors.done,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      if (!compact && _packedItemNames.isNotEmpty) ...[
+                                        SizedBox(height: tight ? 10 : 14),
+                                        Wrap(
+                                          key: const ValueKey('done_packed_items_wrap'),
+                                          alignment: WrapAlignment.center,
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: [
+                                            ..._packedItemNames.take(6).map((name) {
+                                              return ConstrainedBox(
+                                                constraints: const BoxConstraints(maxWidth: 112),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 9,
+                                                    vertical: 3.5,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.doneLight,
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.check_rounded,
+                                                        size: 12,
+                                                        color: AppColors.done,
+                                                      ),
+                                                      const SizedBox(width: 3),
+                                                      Flexible(
+                                                        child: Text(
+                                                          name,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: const TextStyle(
+                                                            fontSize: 11.5,
+                                                            fontWeight: FontWeight.w500,
+                                                            color: AppColors.done,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            }),
+                                            if (_packedItemNames.length > 6)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 3.5,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primaryLight,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '+${_packedItemNames.length - 6}',
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFeatures: [FontFeature.tabularFigures()],
+                                                    color: AppColors.textSecondary,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                          const Spacer(),
 
                           // Departure Button: 出门 🚪 (Full capsule StadiumBorder, height: 54)
                           SizedBox(

@@ -37,6 +37,7 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   String _initialSnapshot = '';
+  String? _appliedTemplateName;
 
   final List<String> _emojiPickerOptions = [
     '🎒', '💼', '👜', '🧳', '🤚', '🏃', '✈️', '🏕️', '💻', '🏋️', '🚴', '🚗',
@@ -140,6 +141,23 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
           .join();
       _mnemonicController.text = chars;
     }
+  }
+
+  void _applySceneTemplate(({String name, String emoji, List<String> items}) template) {
+    HapticService.selection();
+    final currentName = _nameController.text.trim();
+    final shouldReplaceName = currentName.isEmpty || currentName == _appliedTemplateName;
+    setState(() {
+      _appliedTemplateName = template.name;
+      _selectedEmoji = template.emoji;
+      if (shouldReplaceName) {
+        _nameController.text = template.name;
+      }
+      _items = template.items
+          .map((name) => (name: name, emoji: EmojiPresets.matchEmoji(name)))
+          .toList();
+      _updateMnemonicIfAuto();
+    });
   }
 
   void _addItem(String name) {
@@ -499,6 +517,52 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
               ],
             ),
 
+            // 1.5 Quick Scene Templates (for new checklists)
+            if (widget.checklistId == null) ...[
+              const SizedBox(height: 16),
+              const Text(
+                '场景模板 · 一键套用',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: EmojiPresets.sceneTemplates.map((template) {
+                    final isApplied = _appliedTemplateName == template.name;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        key: ValueKey('editor_template_${template.name}'),
+                        label: Text('${template.emoji} ${template.name}'),
+                        selected: isApplied,
+                        selectedColor: AppColors.primary,
+                        backgroundColor: AppColors.card,
+                        showCheckmark: false,
+                        labelStyle: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isApplied ? AppColors.onDark : AppColors.textPrimary,
+                        ),
+                        side: BorderSide(
+                          color: isApplied ? AppColors.primary : AppColors.borderStrong,
+                          width: 0.8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        onSelected: (_) => _applySceneTemplate(template),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 20),
 
             // 2. Add Item Input
@@ -766,6 +830,70 @@ class _ChecklistEditorScreenState extends ConsumerState<ChecklistEditorScreen> {
                           helperMaxLines: 2,
                         ),
                       ),
+                      if (_mnemonicController.text.trim().isNotEmpty && _items.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          key: const ValueKey('editor_mnemonic_preview'),
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: () {
+                            final chars = _mnemonicController.text.trim().characters.toList();
+                            final pairCount =
+                                chars.length < _items.length ? chars.length : _items.length;
+                            return List.generate(pairCount, (idx) {
+                              final pastelBg =
+                                  AppColors.pastelPills[idx % AppColors.pastelPills.length];
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.border, width: 0.6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        color: pastelBg,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        chars[idx],
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 84),
+                                      child: Text(
+                                        _items[idx].name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            });
+                          }(),
+                        ),
+                      ],
                     ],
                   ],
                 ),
