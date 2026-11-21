@@ -521,25 +521,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                           ],
                         ),
-                        if (customLists.isNotEmpty)
-                          const Row(
-                            children: [
-                              Icon(
-                                Icons.touch_app_outlined,
-                                size: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                              SizedBox(width: 3),
-                              Text(
-                                '点 ⋯ 或长按管理',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                        if (customLists.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          const Flexible(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.touch_app_outlined,
+                                  size: 14,
                                   color: AppColors.textSecondary,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(
+                                    '点 ⋯ 或长按管理',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                        ],
                       ],
                     ),
                   ),
@@ -717,9 +726,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Flexible(
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 180),
                               child: Text(
                                 hero.name,
                                 maxLines: 1,
@@ -733,7 +746,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -757,6 +769,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                               ),
                             ),
+                            if (hero.highRiskCount > 0)
+                              Container(
+                                key: const ValueKey('hero_high_risk_badge'),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.dangerLight,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.bolt_rounded,
+                                      size: 12,
+                                      color: AppColors.danger,
+                                    ),
+                                    Text(
+                                      '${hero.highRiskCount} 高危',
+                                      style: const TextStyle(
+                                        color: AppColors.danger,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        fontFeatures: [FontFeature.tabularFigures()],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -848,7 +891,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ],
                 ],
               ),
-              const SizedBox(height: 18),
+              if (hero.hasUnfinishedActiveSession && hero.progress > 0) ...[
+                const SizedBox(height: 14),
+                ClipRRect(
+                  key: const ValueKey('hero_progress_bar'),
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: hero.progress.clamp(0.0, 1.0),
+                    minHeight: 5,
+                    backgroundColor: AppColors.secondaryBg,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ] else
+                const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -870,13 +929,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        ctaText,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          letterSpacing: 0.4,
-                          fontFeatures: [FontFeature.tabularFigures()],
+                      Flexible(
+                        child: Text(
+                          ctaText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            letterSpacing: 0.4,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),

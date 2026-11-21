@@ -31,6 +31,33 @@ class EmojiPresets {
     MapEntry(['帽子'], '🧢'),
     MapEntry(['运动鞋'], '👟'),
     MapEntry(['午饭', '饭盒'], '🍱'),
+    MapEntry(['衣物', '衣服', 'T恤'], '👕'),
+    MapEntry(['毛巾'], '🧻'),
+    MapEntry(['洗漱'], '🪥'),
+  ];
+
+  /// One-tap starter templates for quickly creating a new checklist.
+  static const List<({String name, String emoji, List<String> items})> sceneTemplates = [
+    (
+      name: '通勤',
+      emoji: '💼',
+      items: ['手机', '钥匙', '工牌', '耳机', '充电宝', '雨伞'],
+    ),
+    (
+      name: '健身',
+      emoji: '🏋️',
+      items: ['水杯', '运动鞋', '耳机', '毛巾', '换洗衣物'],
+    ),
+    (
+      name: '短途差旅',
+      emoji: '✈️',
+      items: ['身份证', '手机', '充电器', '充电宝', '洗漱包', '换洗衣物'],
+    ),
+    (
+      name: '周末出游',
+      emoji: '🏕️',
+      items: ['身份证', '手机', '钥匙', '充电宝', '纸巾', '水杯'],
+    ),
   ];
 
   /// Top 12 common items for quick tags.
